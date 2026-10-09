@@ -1,0 +1,35 @@
+# --- secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+.dev.vars
+.dev.vars.*
+
+# --- rust ---
+/target
+**/*.rs.bk
+
+# --- node / frontend ---
+node_modules/
+web/.next/
+web/out/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- cloudflare worker build artifacts ---
+/build/
+worker/
+.wrangler/
+
+# --- testsprite local artifacts ---
+/.testsprite/
+testsprite_test_code/
+/testsprite-*.xml
+/testsprite-*.json
+
+# --- os / editor ---
+.DS_Store
+*.swp
+.idea/
+.vscode/

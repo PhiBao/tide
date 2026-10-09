@@ -1,0 +1,20 @@
+[package]
+name = "tide-api"
+description = "Tide HTTP layer: an Axum router that also compiles to wasm32 and runs on Cloudflare Workers."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tide-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+axum = "0.8"
+tower-http = { version = "0.6", features = ["cors", "limit", "trace"] }
+http = "1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = { version = "0.5", features = ["util"] }

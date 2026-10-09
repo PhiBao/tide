@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = ["crates/core", "crates/api", "crates/worker"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/PhiBao/tide"
+
+[workspace.dependencies]
+tide-core = { path = "crates/core" }
+tide-api = { path = "crates/api" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# ---------------------------------------------------------------------------
+# Profile notes:
+#  * `release` is what ships to WebAssembly on Cloudflare Workers. `opt-level`
+#    and `lto` are tuned for WASM code size; `panic` is set in the worker
+#    crate's profile (see crates/worker/Cargo.toml).
+#  * `test` keeps overflow checks on: every arithmetic path in `tide-core` is
+#    integer-only, so a silent wrap would be a correctness bug, not a perf bug.
+# ---------------------------------------------------------------------------
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.bench]
+debug = true
