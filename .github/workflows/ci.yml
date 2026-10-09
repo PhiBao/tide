@@ -102,7 +102,12 @@ jobs:
       - name: Build frontend
         run: pnpm --dir web install --frozen-lockfile && pnpm --dir web build
 
+      # worker-build reads the manifest of the crate it runs in, so it must be
+      # invoked from crates/worker. It emits build/index.js + index_bg.wasm,
+      # which is what wrangler uploads; a plain `cargo build` would produce only
+      # an .rlib and wrangler would find no entry point.
       - name: Build worker
+        working-directory: crates/worker
         run: cargo install -q worker-build && worker-build --release
 
       - name: Mint preview
