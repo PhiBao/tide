@@ -37,9 +37,10 @@ use crate::civil::CivilDate;
 use crate::money::{MicroUsd, MicroUsdPerKwh, Wh};
 use crate::timegrid::SlotGrid;
 use crate::zone::LocalZone;
+use serde::{Deserialize, Serialize};
 
 /// Which days of the week a rate period applies to.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DaySelector {
     EveryDay,
     Weekdays,
@@ -70,7 +71,7 @@ impl DaySelector {
 ///
 /// Windows that cross midnight are supported by `start_minute > end_minute`,
 /// which matches how tariffs are actually written ("overnight 21:00 to 07:00").
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RatePeriod {
     pub id: String,
     pub label: String,
@@ -153,7 +154,7 @@ impl RatePeriod {
 }
 
 /// A recurring fixed charge, e.g. a monthly customer charge.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct FixedCharge {
     pub label: String,
     /// Charged `amount` once per `per_days` days.
@@ -162,7 +163,7 @@ pub struct FixedCharge {
 }
 
 /// A charge on the highest sustained power draw in the billing period.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DemandCharge {
     pub label: String,
     /// Micro-USD per kW of peak import power.
@@ -170,7 +171,7 @@ pub struct DemandCharge {
 }
 
 /// Credit for energy exported back to the grid.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ExportCredit {
     pub label: String,
     /// Micro-USD per kWh paid for exported energy.
@@ -178,7 +179,7 @@ pub struct ExportCredit {
 }
 
 /// A complete, self-describing electricity tariff.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Tariff {
     pub id: String,
     pub name: String,
@@ -310,7 +311,7 @@ pub struct CoverageGap {
 }
 
 /// Metered usage for a grid.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Usage {
     /// Watt-hours drawn from the grid per slot.
     pub import_wh: Vec<Wh>,
@@ -341,7 +342,7 @@ pub enum UsageFault {
 }
 
 /// One line of a bill: what it is, how much, and why.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BillLine {
     pub label: String,
     /// Energy this line covers.
@@ -354,7 +355,7 @@ pub struct BillLine {
 }
 
 /// A computed bill.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Bill {
     pub lines: Vec<BillLine>,
     /// The exact total in micro-dollars.

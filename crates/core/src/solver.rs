@@ -51,12 +51,13 @@
 //! to the lower index, and there is no randomness. Identical input produces
 //! byte-identical output, which the determinism tests assert.
 
-use crate::model::{Decomposition, Load, Placement, Schedule, Scenario};
+use crate::model::{Load, Placement, Schedule, Scenario};
+use serde::{Deserialize, Serialize};
 use crate::timegrid::SlotGrid;
 use crate::money::{MicroUsd, Wh};
 
 /// How confident we are that the returned schedule is the cheapest possible.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Optimality {
     /// The cost equals the relaxation lower bound, so the schedule is provably
     /// the global optimum.
@@ -263,7 +264,7 @@ fn greedy_place(scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u64]) -
         if power == 0 {
             continue;
         }
-        let decomp: Decomposition = load.decompose(grid);
+        let decomp = load.decompose(grid);
         if decomp.total_slots() == 0 {
             continue;
         }

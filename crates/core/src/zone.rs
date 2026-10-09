@@ -24,6 +24,7 @@
 //! `tests/hour_of_dst.rs` pins it down.
 
 use crate::civil::{CivilDate, WeekOfMonth};
+use serde::{Deserialize, Serialize};
 
 /// Offsets are minutes east of UTC (US Eastern is `-300`).
 pub type OffsetMinutes = i16;
@@ -34,7 +35,7 @@ pub type OffsetMinutes = i16;
 /// transition by an hour. The United States defines spring-forward in local
 /// **standard** time (02:00 EST) and fall-back in local **daylight** time
 /// (02:00 EDT). The European Union defines both in UTC.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TransitionConvention {
     /// Transition instant is `local_minutes` interpreted at the standard offset.
     LocalStandard,
@@ -45,7 +46,7 @@ pub enum TransitionConvention {
 }
 
 /// One annual DST transition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Transition {
     pub month: u8,
     pub week: WeekOfMonth,
@@ -64,7 +65,7 @@ impl Transition {
 }
 
 /// Daylight-saving rule for a zone.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DstRule {
     pub start: Transition,
     pub end: Transition,
@@ -115,7 +116,7 @@ impl DstRule {
 }
 
 /// A time zone, used to express tariffs in local wall-clock time.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LocalZone {
     pub name: String,
     /// Standard-time offset, minutes east of UTC.

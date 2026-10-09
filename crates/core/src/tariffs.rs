@@ -19,8 +19,9 @@ use crate::zone::LocalZone;
 #[must_use]
 pub fn bundled() -> Vec<Tariff> {
     vec![
-        flat_tou_weekday_evening(),
+        flat(),
         overnight_ev_tariff(),
+        flat_tou_weekday_evening(),
         tou_summer_afternoon(),
     ]
 }

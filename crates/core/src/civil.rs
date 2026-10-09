@@ -16,7 +16,7 @@
 //! which are exact for the entire proleptic Gregorian range we can represent.
 
 /// A calendar date in the proleptic Gregorian calendar.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CivilDate {
     pub year: i32,
     /// 1..=12
@@ -75,7 +75,7 @@ impl fmt::Display for CivilDate {
 ///
 /// Used to express statutory DST transitions: US daylight saving begins on the
 /// **second** Sunday in March, the EU's begins on the **last** Sunday in March.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WeekOfMonth {
     First,
     Second,
@@ -178,6 +178,7 @@ pub const fn civil_from_days(days: i64) -> CivilDate {
 }
 
 use core::fmt;
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod tests {
