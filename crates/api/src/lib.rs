@@ -142,7 +142,7 @@ async fn get_tariff(State(state): State<AppState>, Path(id): Path<String>) -> Re
 async fn prices(request: axum::extract::Request) -> Response {
     let (req, state) = match body::<PriceRequest>(request).await {
         Ok(v) => v,
-        Err(e) => return e,
+        Err(e) => return e.into_response(),
     };
     match resolve_grid(&req.grid) {
         Ok(grid) => {
@@ -171,7 +171,7 @@ async fn prices(request: axum::extract::Request) -> Response {
 async fn horizon(request: axum::extract::Request) -> Response {
     let (req, state) = match body::<HorizonRequest>(request).await {
         Ok(v) => v,
-        Err(e) => return e,
+        Err(e) => return e.into_response(),
     };
     let Some(tariff) = state.tariff(&req.tariff_id) else {
         return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id))
@@ -213,7 +213,7 @@ fn price_response(tariff: &Tariff, grid: &SlotGrid) -> PriceResponse {
 async fn solve_scenario(request: axum::extract::Request) -> Response {
     let (req, state) = match body::<SolveRequest>(request).await {
         Ok(v) => v,
-        Err(e) => return e,
+        Err(e) => return e.into_response(),
     };
     let Some(scenario) = build_scenario(&req.scenario) else {
         return ApiError::bad_request("scenario.id is required").into_response();
@@ -272,7 +272,7 @@ async fn solve_scenario(request: axum::extract::Request) -> Response {
 async fn verify_scenario(request: axum::extract::Request) -> Response {
     let (req, state) = match body::<SolveRequest>(request).await {
         Ok(v) => v,
-        Err(e) => return e,
+        Err(e) => return e.into_response(),
     };
     let Some(scenario) = build_scenario(&req.scenario) else {
         return ApiError::bad_request("scenario.id is required").into_response();
@@ -321,7 +321,7 @@ async fn verify_scenario(request: axum::extract::Request) -> Response {
 async fn bills(request: axum::extract::Request) -> Response {
     let (req, state) = match body::<BillRequest>(request).await {
         Ok(v) => v,
-        Err(e) => return e,
+        Err(e) => return e.into_response(),
     };
     let grid = match resolve_grid(&req.grid) {
         Ok(g) => g,
@@ -565,7 +565,7 @@ impl IntoResponse for ApiError {
 /// target type: ...` as plain text, which breaks the contract that every error
 /// carries a stable machine-readable `code`. A client — or a test — should never
 /// have to parse prose to learn what went wrong.
-async fn json_rejection(err: axum::extract::rejection::JsonRejection) -> Response {
+fn json_rejection(err: axum::extract::rejection::JsonRejection) -> ApiError {
     let status = err.status();
     let code: &'static str = match &err {
         axum::extract::rejection::JsonRejection::MissingJsonContentType(_) => {
@@ -583,7 +583,6 @@ async fn json_rejection(err: axum::extract::rejection::JsonRejection) -> Respons
         code,
         message,
     }
-    .into_response()
 }
 
 /// Extract a typed JSON body, or return the shared error envelope.
@@ -592,7 +591,7 @@ async fn json_rejection(err: axum::extract::rejection::JsonRejection) -> Respons
 /// (`Failed to deserialize the JSON body ...`), which breaks the rule every
 /// other error path follows: a stable machine-readable `code` and a human
 /// message in the same shape.
-async fn body<T>(mut request: axum::extract::Request) -> Result<(T, AppState), Response>
+async fn body<T>(mut request: axum::extract::Request) -> Result<(T, AppState), ApiError>
 where
     T: serde::de::DeserializeOwned + Send + 'static,
 {
@@ -602,7 +601,7 @@ where
         .unwrap_or_default();
     match Json::<T>::from_request(request, &()).await {
         Ok(Json(value)) => Ok((value, state)),
-        Err(rejection) => Err(json_rejection(rejection).await),
+        Err(rejection) => Err(json_rejection(rejection)),
     }
 }
 
