@@ -118,16 +118,28 @@ jobs:
         working-directory: crates/worker
         run: |
           set -o pipefail
-          output="$(npx wrangler preview --name "pr-${{ github.event.pull_request.number }}" --json 2>&1)" || {
+
+          # wrangler prints human-readable preamble lines before its --json
+          # payload, so the output has to be trimmed to the JSON object before
+          # jq can read it. Feeding the raw output to jq fails with
+          # "Invalid numeric literal" on the banner, which is a parsing problem
+          # and not an API one — the two are reported separately below.
+          if ! raw="$(npx wrangler preview --name "pr-${{ github.event.pull_request.number }}" --json 2>&1)"; then
+            printf '%s\n' "$raw"
             echo "::error title=Preview failed::wrangler could not create a preview for this PR."
             echo "::error::CLOUDFLARE_API_TOKEN must be an Account API token with the"\
-                  "'Edit Cloudflare Workers' permission, scoped to this account."\
-                  "A zone-scoped or read-only token is rejected as 'No access to the specified resource'."
-            printf '%s\n' "$output"
+                  "'Edit Cloudflare Workers' permission, scoped to this account."
             exit 1
-          }
-          printf '%s\n' "$output"
-          url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"
+          fi
+
+          output="$(printf '%s\n' "$raw" | sed -n '/^{/,$p')"
+          if ! url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"; then
+            printf '%s\n' "$raw"
+            echo "::error title=Preview URL unreadable::wrangler succeeded but its JSON"\
+                  "did not contain preview.urls[0], so the output shape has changed."
+            exit 1
+          fi
+          echo "Preview: $url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Smoke probe
