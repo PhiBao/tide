@@ -283,29 +283,17 @@ export default function Home() {
                   aria-label={`${load.label} label`}
                   value={load.label}
                   onChange={(e) => updateLoad(load.id, { label: e.target.value })}
-                  style={{
-                    border: 0,
-                    background: "transparent",
-                    padding: "3px 4px",
-                    width: "100%",
-                    font: "inherit",
-                    color: "inherit",
-                  }}
                 />
               </div>
 
               <div className="load-readout">
                 <div>{kwh(delivered)}</div>
-                <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                  by slot {load.deadline_slot}
-                </div>
+                <small>by slot {load.deadline_slot}</small>
               </div>
 
-              <div className="load-readout">
+              <div className="load-readout power">
                 <div>{(load.max_power_w / 1000).toFixed(1)} kW</div>
-                <div style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                  {placement ? `${placement.slots.length} slots` : "—"}
-                </div>
+                <small>{placement ? `${placement.slots.length} slots` : "—"}</small>
               </div>
 
               <div className="load-actions">

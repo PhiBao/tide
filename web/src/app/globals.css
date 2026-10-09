@@ -235,18 +235,59 @@ button:disabled {
 
 .load {
   display: grid;
-  grid-template-columns: 1fr 130px 92px 70px;
+  /*
+   * Named areas rather than positional columns, because the two layouts need
+   * the same four children in genuinely different arrangements and positional
+   * rules get unreadable fast.
+   *
+   * The actions column is `auto`, sized to its buttons rather than guessed at.
+   * A fixed track does NOT grow to fit overflowing content: with a 70px track
+   * and ~114px of buttons, the buttons spilled out of their column and painted
+   * over the readout, clipping "7.0 kW" to "7.0 k" and "7 slots" to "7 slo".
+   * `minmax(0, 1fr)` on the name lets it shrink instead of pushing the others.
+   */
+  grid-template-columns: minmax(0, 1fr) 118px 96px auto;
+  grid-template-areas: "name energy power actions";
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   padding: 11px 2px;
   border-bottom: 1px solid var(--hair);
+}
+
+.load-name {
+  grid-area: name;
+}
+
+.load-readout {
+  grid-area: energy;
+}
+
+.load-readout.power {
+  grid-area: power;
+}
+
+.load-actions {
+  grid-area: actions;
 }
 
 .load-name {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   font-weight: 500;
+}
+
+/* The label is an input so it stays editable, but it must never widen the row. */
+.load-name input {
+  border: 0;
+  background: transparent;
+  padding: 3px 4px;
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  color: inherit;
+  text-overflow: ellipsis;
 }
 
 .swatch {
@@ -262,6 +303,14 @@ button:disabled {
   font-size: 13px;
   color: var(--ink-2);
   text-align: right;
+  /* Keep "7.0 kW" and "7 slots" on one line: a wrapped unit reads as a typo. */
+  white-space: nowrap;
+}
+
+.load-readout small {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-3);
 }
 
 .load-actions {
@@ -270,10 +319,17 @@ button:disabled {
   gap: 6px;
 }
 
+/* Fixed-size controls so the column width is deterministic rather than
+   dependent on the glyphs inside the buttons. */
 .load-actions button {
-  padding: 4px 9px;
-  font-size: 12px;
-  line-height: 1.2;
+  width: 34px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
 }
 
 /* ---------------------------------------------------------------------------
@@ -492,9 +548,16 @@ tr.row:hover td {
     gap: 6px;
   }
 
+  /* One column cannot hold a label plus two figures plus three controls on a
+     phone without one of them clipping, so the row becomes three bands. */
   .load {
-    grid-template-columns: 1fr 74px;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name    name"
+      "energy  power"
+      "actions actions";
+    gap: 4px 12px;
+    padding: 12px 2px;
   }
 
   .load-readout {
@@ -502,8 +565,8 @@ tr.row:hover td {
   }
 
   .load-actions {
-    grid-column: 1 / -1;
     justify-content: flex-start;
+    margin-top: 4px;
   }
 
   .outcome {
