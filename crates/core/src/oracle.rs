@@ -69,11 +69,11 @@ impl OracleVerdict {
             Some(0) => "verified: exact optimum".to_string(),
             Some(_opt) if self.is_optimal => "verified: exact optimum".to_string(),
             Some(opt) => {
-                let pct_x1000 = if opt == 0 {
-                    0
-                } else {
-                    (self.excess_numer * 100_000) / u128::from(opt)
-                };
+                // `opt == 0` is handled by the earlier arm, so the division is
+                // provably non-None here.
+                let pct_x1000 = (self.excess_numer * 100_000)
+                    .checked_div(opt)
+                    .expect("opt is non-zero on this branch");
                 format!(
                     "verified: {}.{:03}% above exact optimum",
                     pct_x1000 / 1_000,
@@ -242,13 +242,15 @@ fn enumerate(
                 } else {
                     load.max_power_w
                 };
+                let used = site_used.get(s).copied().unwrap_or(0);
                 if scenario.site_cap_w > 0
-                    && u64::from(site_used[s]) + u64::from(w) > u64::from(scenario.site_cap_w)
+                    && u64::from(used) + u64::from(w) > u64::from(scenario.site_cap_w)
                 {
                     ok = false;
                     break;
                 }
-                cost += energy_of(w, grid) * u128::from(prices[s]);
+                let slot_price = prices.get(s).copied().unwrap_or(0);
+                cost += energy_of(w, grid) * u128::from(slot_price);
             }
             if !ok {
                 continue;
@@ -266,12 +268,16 @@ fn enumerate(
                 } else {
                     load.max_power_w
                 };
-                site_used[s] += w;
+                if let Some(entry) = site_used.get_mut(s) {
+                    *entry += w;
+                }
                 added.push((s, w));
             }
             enumerate(scenario, grid, prices, site_used, depth + 1, search, cost);
             for (s, w) in added {
-                site_used[s] -= w;
+                if let Some(entry) = site_used.get_mut(s) {
+                    *entry -= w;
+                }
             }
         }
         true // keep going
@@ -374,12 +380,15 @@ pub fn solve_baseline(scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u
             } else {
                 load.max_power_w
             };
+            let used = site_used.get(s).copied().unwrap_or(0);
             if scenario.site_cap_w > 0
-                && u64::from(site_used[s]) + u64::from(w) > u64::from(scenario.site_cap_w)
+                && u64::from(used) + u64::from(w) > u64::from(scenario.site_cap_w)
             {
                 continue;
             }
-            site_used[s] += w;
+            if let Some(entry) = site_used.get_mut(s) {
+                *entry += w;
+            }
             if want_partial {
                 partial_taken = true;
             }
@@ -408,14 +417,14 @@ pub fn solve_baseline(scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u
                     load.max_power_w
                 };
                 let energy = u128::from(w) * u128::from(grid.slot_minutes) / 60;
-                numer += energy * u128::from(weighted_prices[s as usize]);
+                let slot_price = weighted_prices.get(s as usize).copied().unwrap_or(0);
+                numer += energy * u128::from(slot_price);
             }
             numer
         })
         .sum();
 
-    let schedule = assemble(scenario, grid, &placements, cost_numer);
-    schedule
+    assemble(scenario, grid, &placements, cost_numer)
 }
 
 pub use assemble as assemble_schedule;
@@ -544,29 +553,45 @@ mod tests {
     #[test]
     fn oracle_finds_the_true_optimum_for_a_small_instance() {
         let g = grid();
-        // Prices: slots 0..8 alternate cheap/expensive. Two small loads.
         let mut prices = vec![0u64; 96];
-        for s in 0..96 {
-            prices[s] = if s < 12 { 100 } else { 500 };
+        for (s, price) in prices.iter_mut().enumerate() {
+            *price = if s < 12 { 100 } else { 500 };
         }
         let sc = scenario(
             vec![
-                load("a", 1, 2, 11, 0), // 1 kWh at 2 kW = 0.5 kWh/slot -> 2 slots
+                load("a", 1, 2, 11, 0), // 1 kWh at 2 kW = 2 slots of 500 Wh
                 load("b", 1, 2, 11, 0),
             ],
             0,
         );
-        let verdict = verify(&sc, &g, &prices, 0, DEFAULT_NODE_BUDGET);
+
+        // Solve for real, then hand the oracle the solver's actual cost. Passing
+        // a placeholder here would make the comparison meaningless — an earlier
+        // version of this test passed zero and quietly asserted nothing.
+        let solution = crate::solver::solve(&sc, &g, &prices).unwrap();
+        let solver_numer = crate::verify::schedule_numer(
+            &solution.schedule,
+            &sc,
+            &g,
+            &prices,
+        );
+        let verdict = verify(&sc, &g, &prices, solver_numer, DEFAULT_NODE_BUDGET);
+
         assert!(
             matches!(verdict.outcome, OracleOutcome::Exhaustive { .. }),
             "a 12-slot, 2-load instance must be enumerable"
         );
-        // Both loads want the two cheapest slots (0 and 1) at $100/kWh.
-        // Each delivers 1 kWh total: 2 slots * 0.5 kWh = 1 kWh.
-        let expected: u128 = 2 * (0 * 500) // placeholder, computed below
-            ;
-        let _ = expected;
-        assert!(verdict.optimal_numer.is_some());
+        // Every slot in this 12-slot grid costs the same, so the optimum is the
+        // total energy at that price: 4 slots x 500 Wh x 100 = 200 000.
+        assert_eq!(
+            verdict.optimal_numer,
+            Some(200_000),
+            "the oracle should have found the cheapest legal schedule"
+        );
+        assert_eq!(verdict.solver_numer, 200_000);
+        assert!(verdict.is_optimal, "the solver must match the oracle exactly");
+        assert_eq!(verdict.excess_numer, 0);
+        assert_eq!(verdict.badge(), "verified: exact optimum");
     }
 
     #[test]
@@ -591,9 +616,9 @@ mod tests {
     fn baseline_runs_everything_early_and_respects_the_cap() {
         let g = grid();
         let mut prices = vec![0u64; 96];
-        for s in 0..96 {
+        for (s, price) in prices.iter_mut().enumerate() {
             // Cheap late, expensive early.
-            prices[s] = if s < 48 { 900 } else { 100 };
+            *price = if s < 48 { 900 } else { 100 };
         }
         let sc = scenario(vec![load("ev", 2, 2, 95, 0)], 0);
         let schedule = solve_baseline(&sc, &g, &prices);

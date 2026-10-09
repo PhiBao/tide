@@ -131,13 +131,7 @@ pub const fn days_in_month(year: i32, month: u8) -> u8 {
     match month {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
-        2 => {
-            if is_leap_year(year) {
-                29
-            } else {
-                28
-            }
-        }
+        2 if is_leap_year(year) => 29,
         // Defensive: callers validate `month` in 1..=12, but a `const fn`
         // cannot panic, so fall back to the shortest month.
         _ => 28,

@@ -424,7 +424,6 @@ pub struct Bill {
 
 impl Bill {
     /// Total energy metered across all volumetric lines.
-    #[must_use]
     pub fn metered_energy(&self) -> Wh {
         self.lines
             .iter()
@@ -437,7 +436,6 @@ impl Bill {
     /// Fixed charges are prorated onto the billing window by
     /// `amount * window_days / per_days`, and the proration factor is stated in
     /// the line's `detail` so the arithmetic is inspectable.
-    #[must_use]
     pub fn compute(tariff: &Tariff, grid: &SlotGrid, usage: &Usage) -> Result<Self, BillFault> {
         usage
             .validate_len(grid.slot_count as usize)
@@ -458,9 +456,15 @@ impl Bill {
         let divisor = 1_000u128;
 
         for i in 0..grid.slot_count as usize {
-            let price = &prices[i];
-            let import = usage.import_wh[i].0;
-            let export = usage.export_wh[i].0;
+            let Some(price) = prices.get(i) else { continue };
+            let Some(import_slot) = usage.import_wh.get(i) else {
+                continue;
+            };
+            let Some(export_slot) = usage.export_wh.get(i) else {
+                continue;
+            };
+            let import = import_slot.0;
+            let export = export_slot.0;
             export_wh += export;
 
             if import > 0 {
@@ -558,7 +562,7 @@ impl Bill {
                     label: format!("Demand charge ({})", dc.label),
                     energy_wh: Wh::ZERO,
                     rate: None,
-                    amount: MicroUsd(dc.rate_per_kw.0 as i64 * peak_kw as i64),
+                    amount: MicroUsd(dc.rate_per_kw.0 * peak_kw as i64),
                     detail: format!(
                         "{} W peak demand rounded up to {peak_kw} kW at {} micro-USD/kW",
                         peak_w, dc.rate_per_kw.0
@@ -690,9 +694,7 @@ pub fn largest_remainder_split(total: u128, weights: &[u128]) -> Vec<u128> {
     let mut cursor = 0;
     while leftover > 0 {
         let (_, i) = remainders[cursor % remainders.len()];
-        if out[i] < u128::MAX {
-            out[i] += 1;
-        }
+        out[i] = out[i].saturating_add(1);
         leftover -= 1;
         cursor += 1;
         if cursor > 1_000_000 {

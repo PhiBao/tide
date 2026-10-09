@@ -284,7 +284,7 @@ async fn bills_expose_every_line_for_audit() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "got {body:?}");
-    assert!(body["lines"].as_array().unwrap().len() >= 1);
+    assert!(!body["lines"].as_array().unwrap().is_empty());
     for line in body["lines"].as_array().unwrap() {
         assert!(line["label"].is_string());
         assert!(line["energy_wh"].is_number());

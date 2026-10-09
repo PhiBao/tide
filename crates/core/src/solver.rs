@@ -154,13 +154,16 @@ fn relaxed_load_bound(load: &Load, grid: &SlotGrid, prices: &[u64]) -> u128 {
     let limit = (full_slots + usize::from(has_partial)).min(candidates.len());
 
     let mut numer: u128 = 0;
-    // Full-power energy times price, for the cheapest full slots.
-    for i in 0..full_slots.min(limit) {
-        numer += energy_of(power, grid.slot_minutes) * u128::from(candidates[i]);
+    let per_slot_wh = energy_of(power, grid.slot_minutes);
+    let cheapest: Vec<u64> = candidates.iter().take(limit).copied().collect();
+    // Full-power slots, cheapest first.
+    for price in cheapest.iter().take(full_slots.min(limit)) {
+        numer += per_slot_wh * u128::from(*price);
     }
-    if has_partial && limit > full_slots {
-        numer += energy_of(decomp.partial_watts, grid.slot_minutes)
-            * u128::from(candidates[full_slots.min(limit - 1)]);
+    // The reduced-power remainder slot, also cheapest-first.
+    if has_partial && full_slots < cheapest.len() {
+        numer +=
+            energy_of(decomp.partial_watts, grid.slot_minutes) * u128::from(cheapest[full_slots]);
     }
     numer
 }
@@ -214,10 +217,9 @@ pub fn solve(
 
     // --- step 4: assemble and certify -------------------------------------
     let cost_numer = cost_numerator(&draws, grid, weighted_prices);
-    let gap_percent_x1000 = if bound_numer == 0 {
-        0
-    } else {
-        ((cost_numer.saturating_sub(bound_numer) * 100_000) / bound_numer) as u64
+    let gap_percent_x1000 = match bound_numer.checked_sub(0) {
+        Some(0) | None => 0,
+        Some(bound) => ((cost_numer.saturating_sub(bound) * 100_000) / bound) as u64,
     };
     let proved = cost_numer <= bound_numer;
 
@@ -355,7 +357,8 @@ fn try_relocate(
 
     // Consider moving each (slot, watts) draw of this load into a cheaper free
     // slot, at the same power.
-    let mut best: Option<((u32, u32), (u32, u32), u64)> = None;
+    // (from draw, to draw, saving). A named type keeps the comparison readable.
+    let mut best: Option<(Draw, Draw, u64)> = None;
     for &(from, w) in &draws[i] {
         let from_cost = weighted_prices[from as usize];
         for to in start..=end {
@@ -368,16 +371,21 @@ fn try_relocate(
                 continue;
             }
             let saving = from_cost.saturating_sub(weighted_prices[to]);
-            if saving > 0 && best.map_or(true, |(_, _, b)| saving > b) {
-                best = Some(((from, w), (to as u32, w), saving));
+            // `as_ref` because `best` holds `Vec`s and is therefore not `Copy`.
+            let is_better = best
+                .as_ref()
+                .is_none_or(|(_, _, best_saving)| saving > *best_saving);
+            if saving > 0 && is_better {
+                best = Some((vec![(from, w)], vec![(to as u32, w)], saving));
             }
         }
     }
 
-    if let Some(((from, _), (to, w), _)) = best {
+    if let Some((from, to, _)) = best {
         let draw = &mut draws[i];
-        draw.retain(|&(s, _)| s != from);
-        draw.push((to, w));
+        let abandoned: Vec<u32> = from.iter().map(|&(slot, _)| slot).collect();
+        draw.retain(|&(slot, _)| !abandoned.contains(&slot));
+        draw.extend(to);
         draw.sort_by_key(|&(s, _)| s);
         true
     } else {
@@ -402,7 +410,11 @@ fn numer_to_micro_usd(numerator: u128, grid: &SlotGrid) -> MicroUsd {
     if denom == 0 {
         return MicroUsd::ZERO;
     }
-    MicroUsd(i64::try_from((numerator / denom) as i128).unwrap_or(i64::MAX))
+    // Guarded above, so the division is provably non-None.
+    let quotient = numerator
+        .checked_div(denom)
+        .expect("denominator checked non-zero immediately above");
+    MicroUsd(i64::try_from(quotient as i128).unwrap_or(i64::MAX))
 }
 
 fn build_schedule(
