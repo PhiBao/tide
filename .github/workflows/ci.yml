@@ -118,7 +118,14 @@ jobs:
         working-directory: crates/worker
         run: |
           set -o pipefail
-          output="$(npx wrangler preview --name "pr-${{ github.event.pull_request.number }}" --json)"
+          output="$(npx wrangler preview --name "pr-${{ github.event.pull_request.number }}" --json 2>&1)" || {
+            echo "::error title=Preview failed::wrangler could not create a preview for this PR."
+            echo "::error::CLOUDFLARE_API_TOKEN must be an Account API token with the"\
+                  "'Edit Cloudflare Workers' permission, scoped to this account."\
+                  "A zone-scoped or read-only token is rejected as 'No access to the specified resource'."
+            printf '%s\n' "$output"
+            exit 1
+          }
           printf '%s\n' "$output"
           url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"
           echo "url=$url" >> "$GITHUB_OUTPUT"
