@@ -29,6 +29,11 @@ import {
  *  identity across re-solves and a screenshot matches the running app. */
 const LOAD_COLORS = ["#14161c", "#0d6e6e", "#a8253c", "#b8873a", "#2a8f8a", "#c0532f"];
 
+/** How much one press of +/- moves a load's requirement. */
+const STEP_WH = 500;
+/** Below this a load is not meaningfully schedulable, so the control disables. */
+const MIN_ENERGY_WH = 500;
+
 interface Load {
   id: string;
   label: string;
@@ -185,11 +190,29 @@ export default function Home() {
     }
   }, [tariffId, scenario, loads]);
 
-  // Solve as soon as the tariff, loads, and prices are all present.
+  // Solve whenever anything that changes the answer changes.
+  //
+  // The dependency used to be `loads.length`, which meant editing a load's
+  // energy or deadline changed nothing: the length was identical, so no
+  // re-solve fired and the buttons looked broken. This key covers every field
+  // the optimiser reads.
+  const loadsKey = useMemo(
+    () =>
+      loads
+        .map(
+          (l) =>
+            `${l.id}:${l.energy_wh}:${l.max_power_w}:${l.deadline_slot}:${l.earliest_slot}:${l.natural_start_slot}`,
+        )
+        .join("|"),
+    [loads],
+  );
+
   useEffect(() => {
-    if (tariffId && loads.length > 0 && prices.length > 0) void solve();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tariffId, loads.length, prices.length]);
+    if (!tariffId || loads.length === 0 || prices.length === 0) return;
+    // Debounce so a burst of +/- clicks produces one solve rather than five.
+    const timer = setTimeout(() => void solve(), 220);
+    return () => clearTimeout(timer);
+  }, [tariffId, loadsKey, loads.length, prices.length, solve]);
 
   const ribbonLoads: RibbonLoad[] = useMemo(
     () =>
@@ -262,6 +285,7 @@ export default function Home() {
         <button onClick={() => void solve()} disabled={loading || !tariffId}>
           {loading ? "Solving…" : "Re-solve"}
         </button>
+        {loading && <span className="solving" role="status">re-deriving the optimum…</span>}
       </div>
 
       {/* The ribbon. */}
@@ -274,7 +298,12 @@ export default function Home() {
       <div className="load-list">
         {loads.map((load, i) => {
           const placement = solution?.schedule.placements.find((p) => p.load === load.id);
-          const delivered = placement?.delivered_wh ?? load.energy_wh;
+          // Show the *requirement*, which is what the +/- buttons edit, so the
+          // figure responds the instant it is clicked. The placement's delivered
+          // energy is the same number once the re-solve lands, but in the gap
+          // between edit and solve it is the previous answer — displaying it
+          // made the buttons look dead.
+          const requirement = load.energy_wh;
           return (
             <div className="load" key={load.id}>
               <div className="load-name">
@@ -287,7 +316,7 @@ export default function Home() {
               </div>
 
               <div className="load-readout">
-                <div>{kwh(delivered)}</div>
+                <div>{kwh(requirement)}</div>
                 <small>by slot {load.deadline_slot}</small>
               </div>
 
@@ -298,18 +327,32 @@ export default function Home() {
 
               <div className="load-actions">
                 <button
-                  onClick={() => updateLoad(load.id, { energy_wh: Math.max(500, load.energy_wh - 500) })}
+                  type="button"
+                  disabled={load.energy_wh <= MIN_ENERGY_WH}
+                  data-testid={`decrease-${load.id}`}
+                  onClick={() =>
+                    updateLoad(load.id, {
+                      energy_wh: Math.max(MIN_ENERGY_WH, load.energy_wh - STEP_WH),
+                    })
+                  }
                   aria-label={`decrease ${load.label}`}
                 >
                   −
                 </button>
                 <button
-                  onClick={() => updateLoad(load.id, { energy_wh: load.energy_wh + 500 })}
+                  type="button"
+                  data-testid={`increase-${load.id}`}
+                  onClick={() => updateLoad(load.id, { energy_wh: load.energy_wh + STEP_WH })}
                   aria-label={`increase ${load.label}`}
                 >
                   +
                 </button>
-                <button onClick={() => removeLoad(load.id)} aria-label={`remove ${load.label}`}>
+                <button
+                  type="button"
+                  data-testid={`remove-${load.id}`}
+                  onClick={() => removeLoad(load.id)}
+                  aria-label={`remove ${load.label}`}
+                >
                   ×
                 </button>
               </div>
