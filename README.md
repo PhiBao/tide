@@ -225,8 +225,8 @@ NEXT_PUBLIC_API_BASE=https://tide.kiter0211.workers.dev
 | Command | What it does |
 |---|---|
 | `cargo test --workspace` | The full suite: 85 tests |
-| `cargo clippy --workspace --tests -- -D warnings` | Lint, warnings are errors |
-| `cargo fmt --all -- --check` | Format |
+| `cargo clippy --workspace --tests -- -D warnings` | Lint; CI treats any warning as a failure |
+| `cargo fmt --all -- --check` | Format; verified from a clean clone, not just locally |
 | `pnpm --dir web build` | Static frontend export |
 | `wrangler deploy` | Deploy the Worker + assets |
 | `wrangler preview --name pr-123` | Deploy a branch-scoped preview |
