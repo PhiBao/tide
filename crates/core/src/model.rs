@@ -63,6 +63,17 @@ pub struct Load {
     /// (a heat pump restarting repeatedly wastes energy). The solver honours it
     /// when it can and reports when it could not.
     pub prefer_contiguous: bool,
+
+    /// The slot at which the user would *naturally* start this load, without
+    /// planning — when they get home and plug the car in, when they run the
+    /// dishwasher after dinner.
+    ///
+    /// This is what the baseline schedule uses, and getting it right is what
+    /// makes the saving figure honest. A baseline of "as early as possible"
+    /// would start at midnight and accidentally land in the cheap trough,
+    /// showing a saving of zero for a household that is in fact overpaying
+    /// every single night.
+    pub natural_start_slot: u32,
 }
 
 impl Load {
@@ -159,6 +170,9 @@ impl Scenario {
             if self.site_cap_w > 0 && u64::from(load.max_power_w) > u64::from(self.site_cap_w) {
                 faults.push(ScenarioFault::ExceedsSiteCap { load: load.id.clone() });
             }
+            if load.natural_start_slot > grid.slot_count {
+                faults.push(ScenarioFault::NaturalStartOutOfRange { load: load.id.clone() });
+            }
         }
         faults
     }
@@ -176,6 +190,7 @@ pub enum ScenarioFault {
     EmptyWindow { load: LoadId },
     WindowTooShort { load: LoadId, needed: u32, available: u32 },
     ExceedsSiteCap { load: LoadId },
+    NaturalStartOutOfRange { load: LoadId },
 }
 
 impl core::fmt::Display for ScenarioFault {
@@ -194,6 +209,9 @@ impl core::fmt::Display for ScenarioFault {
             ),
             Self::ExceedsSiteCap { load } => {
                 write!(f, "load {load} draws more than the site cap on its own")
+            }
+            Self::NaturalStartOutOfRange { load } => {
+                write!(f, "load {load} would naturally start outside the horizon")
             }
         }
     }
@@ -379,6 +397,7 @@ mod tests {
             deadline_slot: deadline,
             earliest_slot: 0,
             prefer_contiguous: false,
+            natural_start_slot: 0,
         }
     }
 
@@ -397,6 +416,7 @@ mod tests {
             deadline_slot: 90,
             earliest_slot: 0,
             prefer_contiguous: false,
+            natural_start_slot: 0,
         };
         assert_eq!(ev.energy_per_slot(&g), Wh(1_800));
     }

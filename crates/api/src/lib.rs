@@ -38,7 +38,7 @@ use tide_core::money::{MicroUsd, Wh};
 use tide_core::oracle::{solve_baseline, verify as oracle_verify, DEFAULT_NODE_BUDGET};
 use tide_core::rates::{Bill, Tariff, Usage};
 use tide_core::solver::{solve, Optimality};
-use tide_core::timegrid::SlotGrid;
+use tide_core::timegrid::{SlotGrid, MAX_SLOTS};
 
 /// Shared application state.
 #[derive(Clone)]
@@ -82,6 +82,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/tariffs", get(list_tariffs))
         .route("/api/tariffs/{id}", get(get_tariff))
         .route("/api/prices", post(prices))
+        .route("/api/horizon", post(horizon))
         .route("/api/solve", post(solve_scenario))
         .route("/api/solve/verify", post(verify_scenario))
         .route("/api/bills", post(bills))
@@ -90,7 +91,10 @@ pub fn router(state: AppState) -> Router {
             tower_http::cors::CorsLayer::new()
                 .allow_origin(tower_http::cors::Any)
                 .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
-                .allow_headers([header::CONTENT_TYPE]),
+                .allow_headers([
+                    header::CONTENT_TYPE,
+                    header::HeaderName::from_static("x-tide-api-version"),
+                ]),
         )
         .with_state(state)
 }
@@ -141,23 +145,55 @@ async fn prices(State(state): State<AppState>, Json(req): Json<PriceRequest>) ->
             if let Some(resp) = gap_response(tariff) {
                 return resp;
             }
-            let series = tariff.price_series(&grid);
-            Json(PriceResponse {
-                slot_minutes: grid.slot_minutes,
-                slots: series
-                    .iter()
-                    .enumerate()
-                    .map(|(i, p)| SlotPriceResponse {
-                        slot: i as u32,
-                        start_epoch_minutes: grid.slot_start(i as u32),
-                        mean_micro_usd_per_kwh: p.mean_price().0,
-                        weighted_price: p.weighted_price,
-                    })
-                    .collect(),
-            })
-            .into_response()
+            Json(price_response(tariff, &grid)).into_response()
         }
         Err(e) => e.into_response(),
+    }
+}
+
+/// A grid chosen by the server, in the tariff's own timezone.
+///
+/// This endpoint exists because the grid's start must be **tariff-local
+/// midnight**, not the browser's. A browser in UTC+8 asking for "midnight" and
+/// a tariff evaluated in US Eastern describe different instants, and the
+/// resulting chart would be labelled with a clock that disagrees with the prices
+/// it is showing. Deciding the horizon on the server keeps every timezone rule
+/// in one place — the same rule the rate engine already relies on — so the
+/// client never has to know one.
+async fn horizon(State(state): State<AppState>, Json(req): Json<HorizonRequest>) -> Response {
+    let Some(tariff) = state.tariff(&req.tariff_id) else {
+        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id)).into_response();
+    };
+    if req.slots == 0 || req.slots > MAX_SLOTS {
+        return ApiError::unprocessable(format!(
+            "slots must be between 1 and {MAX_SLOTS}, got {}",
+            req.slots
+        ))
+        .into_response();
+    }
+    let grid = match tariff.next_horizon(req.slots, req.slot_minutes, req.now_minutes) {
+        Ok(g) => g,
+        Err(e) => return ApiError::unprocessable(e.to_string()).into_response(),
+    };
+    Json(price_response(tariff, &grid)).into_response()
+}
+
+/// Build the price response shared by `/api/prices` and `/api/horizon`.
+fn price_response(tariff: &Tariff, grid: &SlotGrid) -> PriceResponse {
+    let series = tariff.price_series(grid);
+    PriceResponse {
+        slot_minutes: grid.slot_minutes,
+        start_epoch_minutes: grid.start_epoch_minutes,
+        slots: series
+            .iter()
+            .enumerate()
+            .map(|(i, p)| SlotPriceResponse {
+                slot: i as u32,
+                start_epoch_minutes: grid.slot_start(i as u32),
+                mean_micro_usd_per_kwh: p.mean_price().0,
+                weighted_price: p.weighted_price,
+            })
+            .collect(),
     }
 }
 
@@ -193,6 +229,15 @@ async fn solve_scenario(State(state): State<AppState>, Json(req): Json<SolveRequ
                 lower_bound_micro_usd: solution.lower_bound_micro_usd.0,
                 gap_percent_x1000: solution.gap_percent_x1000,
                 baseline_cost_micro_usd: baseline.cost_micro_usd.0,
+                baseline_placements: baseline
+                    .placements
+                    .iter()
+                    .map(|p| BaselinePlacement {
+                        load: p.load.0.clone(),
+                        slots: p.slots.clone(),
+                        watts: p.watts.clone(),
+                    })
+                    .collect(),
                 diagnostics: solution.diagnostics,
             })
             .into_response()
@@ -340,6 +385,7 @@ fn build_scenario(req: &ScenarioRequest) -> Option<Scenario> {
             deadline_slot: l.deadline_slot,
             earliest_slot: l.earliest_slot.unwrap_or(0),
             prefer_contiguous: l.prefer_contiguous.unwrap_or(false),
+            natural_start_slot: l.natural_start_slot.unwrap_or(0),
         })
         .collect();
     Some(Scenario {
@@ -357,7 +403,7 @@ fn build_scenario(req: &ScenarioRequest) -> Option<Scenario> {
 /// Recompute a solver cost from its placements, to compare against the oracle.
 fn solution_numer(
     schedule: &tide_core::model::Schedule,
-    scenario: &Scenario,
+    _scenario: &Scenario,
     grid: &SlotGrid,
     prices: &[u64],
 ) -> u128 {
@@ -483,9 +529,25 @@ struct GridRequest {
     slots: u32,
 }
 
+#[derive(Debug, Deserialize)]
+struct HorizonRequest {
+    tariff_id: String,
+    slots: u32,
+    slot_minutes: u16,
+    /// The caller's current instant, as epoch minutes since 1970-01-01T00:00Z.
+    ///
+    /// Supplied by the client because the domain layer cannot read a clock on
+    /// wasm32. It carries no timezone semantics — the zone logic that decides
+    /// what "midnight" means is entirely server-side.
+    now_minutes: i64,
+}
+
 #[derive(Debug, Serialize)]
 struct PriceResponse {
     slot_minutes: u16,
+    /// Included so the client can label the axis without ever doing timezone
+    /// arithmetic of its own.
+    start_epoch_minutes: i64,
     slots: Vec<SlotPriceResponse>,
 }
 
@@ -525,6 +587,7 @@ struct LoadRequest {
     deadline_slot: u32,
     earliest_slot: Option<u32>,
     prefer_contiguous: Option<bool>,
+    natural_start_slot: Option<u32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -534,7 +597,19 @@ struct SolveResponse {
     lower_bound_micro_usd: i64,
     gap_percent_x1000: u64,
     baseline_cost_micro_usd: i64,
+    /// The counterfactual's placements, so the client can bill exactly the
+    /// schedule the server costed. Re-deriving it in the browser would use
+    /// different assumptions and could show a saving the engine disagrees with.
+    baseline_placements: Vec<BaselinePlacement>,
     diagnostics: Vec<String>,
+}
+
+/// The counterfactual's placements. Only what the client needs to bill it.
+#[derive(Debug, Serialize)]
+struct BaselinePlacement {
+    load: String,
+    slots: Vec<u32>,
+    watts: Vec<u32>,
 }
 
 #[derive(Debug, Serialize)]

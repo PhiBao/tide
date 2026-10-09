@@ -13,11 +13,17 @@ use tide_core::model::{Load, LoadId, Schedule, Scenario, ScenarioId};
 use tide_core::oracle::{solve_baseline, verify};
 use tide_core::rates::{Tariff, Usage};
 use tide_core::solver::{solve, Optimality};
+use tide_core::civil::days_from_civil;
 use tide_core::timegrid::SlotGrid;
 use tide_core::money::Wh;
 
+/// Epoch day of 2026-10-09, derived rather than hard-coded.
+fn day_2026_10_09() -> i64 {
+    days_from_civil(2026, 10, 9)
+}
+
 fn grid() -> SlotGrid {
-    SlotGrid::new(20_471 * 1_440, 15, 96)
+    SlotGrid::new(day_2026_10_09() * 1_440, 15, 96)
 }
 
 fn load(id: &str, kwh: u64, kw: u32, deadline: u32) -> Load {
@@ -29,6 +35,7 @@ fn load(id: &str, kwh: u64, kw: u32, deadline: u32) -> Load {
         deadline_slot: deadline,
         earliest_slot: 0,
         prefer_contiguous: false,
+            natural_start_slot: 0,
     }
 }
 
@@ -37,7 +44,7 @@ fn scenario(loads: Vec<Load>, cap: u32) -> Scenario {
         id: ScenarioId::new("s"),
         name: "test".into(),
         tariff_id: "t".into(),
-        grid_start_epoch_minutes: 20_471 * 1_440,
+        grid_start_epoch_minutes: day_2026_10_09() * 1_440,
         slot_minutes: 15,
         slots: 96,
         site_cap_w: cap,
@@ -262,6 +269,7 @@ fn solver_respects_earliest_start() {
                             deadline_slot: 11,
                             earliest_slot: 0,
                             prefer_contiguous: false,
+            natural_start_slot: 0,
                         },
                         Load {
                             id: LoadId::new("b"),
@@ -271,6 +279,7 @@ fn solver_respects_earliest_start() {
                             deadline_slot: 11,
                             earliest_slot: 0,
                             prefer_contiguous: false,
+            natural_start_slot: 0,
                         },
                     ],
                 };
@@ -388,4 +397,51 @@ fn delivered_energy_always_matches_the_requirement_exactly() {
         );
         assert!(!p.unmet);
     }
+}
+
+#[test]
+fn baseline_reflects_the_households_real_habit_not_the_earliest_slot() {
+    // The saving figure is the product, so the counterfactual has to be honest.
+    // "As early as possible" starts at midnight and lands in the cheap trough,
+    // which shows a saving of zero for a household that is overpaying every
+    // night. The baseline must instead run each load when the household would
+    // naturally start it.
+    let g = grid();
+    let prices = overnight_prices();
+    let sc = Scenario {
+        site_cap_w: 7_000,
+        loads: vec![
+            Load {
+                id: LoadId::new("ev"),
+                label: "EV".into(),
+                energy_wh: Wh::from_kwh(12),
+                max_power_w: 7_000,
+                deadline_slot: 95,
+                earliest_slot: 0,
+                prefer_contiguous: false,
+                // Plugged in at 18:00 = slot 72, i.e. squarely on-peak.
+                natural_start_slot: 72,
+            },
+        ],
+        ..scenario(vec![], 0)
+    };
+    let sol = solve(&sc, &g, &prices).unwrap();
+    let baseline = solve_baseline(&sc, &g, &prices);
+
+    assert!(
+        baseline.placements[0].slots.iter().all(|&s| s >= 72),
+        "the baseline must run the EV from 18:00, not from midnight: {:?}",
+        baseline.placements[0].slots
+    );
+    assert!(
+        sol.schedule.cost_micro_usd.0 < baseline.cost_micro_usd.0,
+        "planning must be cheaper than the household's real habit"
+    );
+    // And the saving must be material, not rounding noise.
+    assert!(
+        (baseline.cost_micro_usd.0 - sol.schedule.cost_micro_usd.0) > 100_000,
+        "expected a saving of at least a dime, got {} vs {}",
+        baseline.cost_micro_usd,
+        sol.schedule.cost_micro_usd
+    );
 }

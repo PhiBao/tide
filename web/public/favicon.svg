@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="#f4f2ec"/>
+  <!-- The low-tide mark: a falling limb of the tide curve. -->
+  <path d="M3 12 L10 12 L16 22 L22 12 L29 12" fill="none" stroke="#0d6e6e" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <line x1="3" y1="26.5" x2="29" y2="26.5" stroke="#14161c" stroke-width="2"/>
+</svg>

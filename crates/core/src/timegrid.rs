@@ -153,9 +153,12 @@ mod tests {
         SlotGrid::covering(civil_day_epoch::DAY_2026_10_09 * 1_440, 15, hours)
     }
 
-    // Kept local so the tests do not depend on each other.
+    // Kept local so the tests do not depend on each other. Derived from the
+    // date rather than hard-coded, so a wrong constant cannot silently shift a
+    // test's meaning the way a stale 20471 (which is 2026-01-18, not 2026-10-09)
+    // did.
     mod civil_day_epoch {
-        pub const DAY_2026_10_09: i64 = 20_471;
+        pub const DAY_2026_10_09: i64 = crate::civil::days_from_civil(2026, 10, 9);
     }
 
     #[test]

@@ -1,0 +1,522 @@
+/*
+ * Tide's design system.
+ *
+ * The product is an instrument, not a dashboard. One rule governs every choice
+ * here: the ribbon is the interface, so nothing on the page may compete with it
+ * for attention. That means a limited palette, hairline rules rather than
+ * card borders, sharp corners rather than soft ones, and monospace figures so
+ * that any two numbers line up and can be compared at a glance.
+ *
+ * Colour carries exactly one meaning: price. Cheap is deep teal, expensive is
+ * crimson. It is never decoration.
+ */
+
+:root {
+  /* Ground and ink. A warm paper ground rather than pure white, so the ribbon
+     reads as an instrument panel rather than a spreadsheet. */
+  --paper: #f4f2ec;
+  --paper-2: #ece9e0;
+  --ink: #14161c;
+  --ink-2: #4a4f5c;
+  --ink-3: #8b909c;
+
+  /* Price scale. Order matters: teal is cheap, crimson is the peak. */
+  --price-0: #0d6e6e; /* trough  */
+  --price-1: #2a8f8a;
+  --price-2: #6b9e4a;
+  --price-3: #b8873a;
+  --price-4: #c0532f;
+  --price-5: #a8253c; /* peak    */
+
+  /* The one accent, used for a proven result and nothing else. */
+  --proved: #0d6e6e;
+  --heuristic: #b8873a;
+
+  --hair: #d5d1c4;
+  --hair-strong: #b9b4a5;
+
+  --slot: 44px;    /* one hour of ribbon at full width */
+  --rhythm: 12px;
+
+  --font-display: "Space Grotesk", "Helvetica Neue", system-ui, sans-serif;
+  --font-text: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", ui-monospace, monospace;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Every figure in the product is monospaced and tabular, so a column of
+   numbers is comparable without squinting. */
+figure,
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout: one long instrument, deliberately narrower than the viewport so the
+   ribbon stays a legible object rather than a stretched decoration.
+   --------------------------------------------------------------------------- */
+
+.shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 28px 96px;
+}
+
+.masthead {
+  border-bottom: 1px solid var(--ink);
+  padding: 26px 0 18px;
+  margin-bottom: 26px;
+}
+
+.masthead-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+
+.wordmark small {
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  margin-left: 12px;
+  text-transform: uppercase;
+}
+
+.tagline {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* A rule that does real work, separating sections of one instrument. */
+.rule {
+  border: 0;
+  border-top: 1px solid var(--hair);
+  margin: 30px 0 20px;
+}
+
+.rule-label {
+  font-family: var(--font-text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 26px 0 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Controls
+   --------------------------------------------------------------------------- */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+select,
+button,
+input[type="number"] {
+  font-family: var(--font-text);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--hair-strong);
+  border-radius: 2px;
+  padding: 7px 11px;
+  cursor: pointer;
+}
+
+select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%),
+    linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+button {
+  font-weight: 500;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+button:hover {
+  border-color: var(--ink);
+}
+
+button:active {
+  background: var(--paper-2);
+}
+
+button.primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  padding: 8px 16px;
+}
+
+button.primary:hover {
+  background: #23262f;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------------------
+   The ribbon
+   --------------------------------------------------------------------------- */
+
+.ribbon {
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+
+.ribbon-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ribbon-axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--ink-3);
+  padding: 7px 10px;
+  border-top: 1px solid var(--hair);
+}
+
+/* ---------------------------------------------------------------------------
+   Loads: a hairline-ruled list, not a grid of cards.
+   --------------------------------------------------------------------------- */
+
+.load-list {
+  border-top: 1px solid var(--hair);
+}
+
+.load {
+  display: grid;
+  grid-template-columns: 1fr 130px 92px 70px;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.load-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.swatch {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  border-radius: 1px;
+}
+
+.load-readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--ink-2);
+  text-align: right;
+}
+
+.load-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.load-actions button {
+  padding: 4px 9px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* ---------------------------------------------------------------------------
+   The outcome
+   --------------------------------------------------------------------------- */
+
+.outcome {
+  margin-top: 26px;
+  border: 1px solid var(--ink);
+  padding: 22px 24px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 26px;
+  align-items: start;
+}
+
+.saving {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 46px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.saving-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 7px;
+}
+
+.certificate {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 9px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  margin-bottom: 10px;
+}
+
+.certificate.proved {
+  color: var(--proved);
+}
+
+.certificate.heuristic {
+  color: var(--heuristic);
+}
+
+.outcome-note {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* ---------------------------------------------------------------------------
+   The two bills, side by side. Hairline table, every row expandable.
+   --------------------------------------------------------------------------- */
+
+.bills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--hair-strong);
+  margin-top: 18px;
+}
+
+.bill {
+  padding: 0;
+}
+
+.bill + .bill {
+  border-left: 1px solid var(--hair-strong);
+}
+
+.bill-head {
+  padding: 13px 18px 11px;
+  border-bottom: 1px solid var(--hair);
+  background: var(--paper-2);
+}
+
+.bill-head h3 {
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.bill-total {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 24px;
+  margin-top: 3px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  font-family: var(--font-text);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 9px 18px 5px;
+}
+
+td {
+  padding: 6px 18px;
+  border-top: 1px solid var(--hair);
+  vertical-align: top;
+}
+
+td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+tr.expanded td {
+  border-top: 0;
+}
+
+tr.detail td {
+  padding-top: 0;
+  padding-bottom: 9px;
+  border-top: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+tr.row {
+  cursor: pointer;
+}
+
+tr.row:hover td {
+  background: var(--paper-2);
+}
+
+/* ---------------------------------------------------------------------------
+   States. Loading, empty, and error are designed, not deferred.
+   --------------------------------------------------------------------------- */
+
+.state {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.state.error {
+  border: 1px solid var(--price-5);
+  color: var(--price-5);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.solving {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------------------
+   Motion. Only what communicates state, and nothing that motion-equivale cannot
+   be read without.
+   --------------------------------------------------------------------------- */
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.load-block {
+  animation: drop 140ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive. The ribbon is the reason the product exists, so it keeps its
+   aspect ratio and the controls reflow beneath it rather than squeezing it.
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .shell {
+    padding: 0 16px 64px;
+  }
+
+  .masthead-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .load {
+    grid-template-columns: 1fr 74px;
+    gap: 8px;
+  }
+
+  .load-readout {
+    text-align: left;
+  }
+
+  .load-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .outcome {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .bills {
+    grid-template-columns: 1fr;
+  }
+
+  .bill + .bill {
+    border-left: 0;
+    border-top: 1px solid var(--hair-strong);
+  }
+}

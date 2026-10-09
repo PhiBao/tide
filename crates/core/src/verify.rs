@@ -132,6 +132,7 @@ mod tests {
                     deadline_slot: 23,
                     earliest_slot: 0,
                     prefer_contiguous: false,
+            natural_start_slot: 0,
                 },
                 Load {
                     id: LoadId::new("b"),
@@ -141,6 +142,7 @@ mod tests {
                     deadline_slot: 23,
                     earliest_slot: 0,
                     prefer_contiguous: false,
+            natural_start_slot: 0,
                 },
             ],
         };

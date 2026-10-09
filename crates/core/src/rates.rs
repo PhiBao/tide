@@ -236,6 +236,43 @@ impl Tariff {
         gaps
     }
 
+    /// A grid of `slots` slots of `slot_minutes`, starting at the next
+    /// **tariff-local** midnight.
+    ///
+    /// The horizon is anchored in the tariff's own zone, so a viewer anywhere in
+    /// the world sees a chart whose axis labels agree with the prices it shows.
+    /// A viewer east or west of the tariff's meridian must not see their own
+    /// clock applied to someone else's rate schedule.
+    pub fn next_horizon(
+        &self,
+        slots: u32,
+        slot_minutes: u16,
+        now_minutes: i64,
+    ) -> Result<SlotGrid, crate::DomainError> {
+        // Walk forward to the next local midnight in this tariff's zone. At most
+        // 1440 steps, and each is a cheap offset calculation.
+        //
+        // `now_minutes` is supplied by the caller rather than read from a clock
+        // on purpose: `std::time::SystemTime` panics on wasm32-unknown-unknown
+        // ("time not implemented on this platform"), so a self-contained clock
+        // here would crash the Worker. Passing it in also makes the horizon a
+        // pure function, which is what lets the tests pin it.
+        let mut candidate = now_minutes;
+        for _ in 0..1_500 {
+            if self.zone.to_local(candidate).minutes_of_day == 0 {
+                break;
+            }
+            candidate += 1;
+        }
+        let grid = SlotGrid::new(candidate, slot_minutes, slots);
+        let faults = grid.validate();
+        if faults.is_empty() {
+            Ok(grid)
+        } else {
+            Err(crate::DomainError::Grid(faults))
+        }
+    }
+
     /// The price series for a grid: one entry per slot.
     #[must_use]
     pub fn price_series(&self, grid: &SlotGrid) -> Vec<SlotPrice> {

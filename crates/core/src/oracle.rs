@@ -331,7 +331,11 @@ pub fn solve_baseline(
     let mut placements = Vec::with_capacity(scenario.loads.len());
 
     for load in &scenario.loads {
-        let start = load.window_start(grid) as usize;
+        // The counterfactual: where the household would *actually* put this
+        // load if nobody optimised it. Not the earliest slot, which would land
+        // in the cheap overnight trough and show a saving of zero.
+        let natural = load.natural_start_slot.min(grid.slot_count.saturating_sub(1)) as usize;
+        let start = natural.max(load.window_start(grid) as usize);
         let end = load.window_end_inclusive(grid) as usize;
         let decomp = load.decompose(grid);
         let total_units = decomp.full_slots as usize + usize::from(decomp.partial_watts > 0);
@@ -462,6 +466,7 @@ mod tests {
             deadline_slot: deadline,
             earliest_slot: earliest,
             prefer_contiguous: false,
+            natural_start_slot: 0,
         }
     }
 

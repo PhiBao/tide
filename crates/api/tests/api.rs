@@ -63,9 +63,14 @@ async fn get_json(uri: &str) -> (StatusCode, Value) {
 }
 
 /// A grid starting at 2026-10-09T00:00:00Z, 96 slots of 15 minutes.
+/// Epoch day of 2026-10-09, derived from the date rather than hard-coded.
+fn epoch_day() -> i64 {
+    tide_core::civil::days_from_civil(2026, 10, 9)
+}
+
 fn grid() -> Value {
     json!({
-        "start_epoch_minutes": 20471 * 1440,
+        "start_epoch_minutes": epoch_day() * 1440,
         "slot_minutes": 15,
         "slots": 96
     })
@@ -76,7 +81,7 @@ fn scenario(loads: Vec<Value>, cap: u32) -> Value {
         "id": "demo",
         "name": "Demo",
         "tariff_id": "overnight-ev",
-        "grid_start_epoch_minutes": 20471 * 1440,
+        "grid_start_epoch_minutes": epoch_day() * 1440,
         "slot_minutes": 15,
         "slots": 96,
         "site_cap_w": cap,
@@ -338,4 +343,91 @@ async fn malformed_json_is_a_400_with_a_stable_code() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn horizon_starts_at_midnight_in_the_tariffs_own_zone() {
+    // The chart's axis is only meaningful if the grid starts at midnight in the
+    // tariff's zone — not the viewer's. 2026-10-09 15:03 UTC is 11:03 US
+    // Eastern (daylight saving), so the next local midnight is 12h57m later and
+    // lands at 04:00 UTC.
+    //
+    // The epoch day is derived from the date rather than hard-coded: an earlier
+    // version of this test used a stale constant that pointed at January, where
+    // the offset is standard rather than daylight, and the assertion passed for
+    // the wrong reason.
+    let day = tide_core::civil::days_from_civil(2026, 10, 9);
+    let now = day * 1440 + 15 * 60 + 3;
+    let (status, body) = post_json(
+        "/api/horizon",
+        json!({ "tariff_id": "overnight-ev", "slots": 96, "slot_minutes": 15, "now_minutes": now }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "got {body:?}");
+    assert_eq!(body["slot_minutes"], 15);
+    assert_eq!(body["start_epoch_minutes"], now + 12 * 60 + 57);
+    // The cheap overnight window is the FIRST part of the returned series, which
+    // is the whole point of anchoring at tariff-local midnight.
+    let slots = body["slots"].as_array().unwrap();
+    assert_eq!(slots.len(), 96);
+    let first_hour_cheap = slots[0]["mean_micro_usd_per_kwh"].as_u64().unwrap()
+        < slots[40]["mean_micro_usd_per_kwh"].as_u64().unwrap();
+    assert!(first_hour_cheap, "the trough must lead the day, not trail it");
+}
+
+#[tokio::test]
+async fn horizon_rejects_an_oversized_grid() {
+    let (status, body) = post_json(
+        "/api/horizon",
+        json!({ "tariff_id": "flat", "slots": 999_999, "slot_minutes": 15, "now_minutes": 0 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["error"]["code"], "invalid_input");
+}
+
+#[tokio::test]
+async fn baseline_runs_loads_where_the_household_actually_would() {
+    // The saving figure is the whole product, so the counterfactual has to be
+    // the household's real habit. A baseline of "as early as possible" would
+    // start at midnight, land in the cheap trough, and report a saving of zero
+    // for a household that overpays every night.
+    let (status, body) = post_json(
+        "/api/solve",
+        json!({
+            "tariff_id": "overnight-ev",
+            "scenario": {
+                "id": "d",
+                "name": "d",
+                "tariff_id": "overnight-ev",
+                "grid_start_epoch_minutes": epoch_day() * 1440,
+                "slot_minutes": 15,
+                "slots": 96,
+                "site_cap_w": 7000,
+                "loads": [{
+                    "id": "ev",
+                    "label": "EV",
+                    "energy_wh": 12000,
+                    "max_power_w": 7000,
+                    "deadline_slot": 95,
+                    "natural_start_slot": 72
+                }]
+            }
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "got {body:?}");
+    let baseline = body["baseline_placements"].as_array().unwrap();
+    assert_eq!(baseline.len(), 1);
+    for slot in baseline[0]["slots"].as_array().unwrap() {
+        assert!(
+            slot.as_u64().unwrap() >= 72,
+            "the baseline must run the EV from 18:00, not midnight"
+        );
+    }
+    assert!(
+        body["baseline_cost_micro_usd"].as_i64().unwrap()
+            > body["schedule"]["cost_micro_usd"].as_i64().unwrap(),
+        "planning must be cheaper than the household's real habit"
+    );
 }
