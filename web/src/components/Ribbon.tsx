@@ -51,7 +51,9 @@ function priceColor(price: number, min: number, max: number): string {
   return SCALE[Math.min(SCALE.length - 1, Math.floor(eased * SCALE.length))];
 }
 
-const LOAD_LANE_HEIGHT = 34;
+const LOAD_LANE_HEIGHT = 44;
+const BLOCK_H = 9;
+const ROW_H = 12;
 
 export default function Ribbon({ prices, loads, slotMinutes, slots }: Props) {
   const width = Math.max(slots * 11, 720);
@@ -59,7 +61,7 @@ export default function Ribbon({ prices, loads, slotMinutes, slots }: Props) {
   const pad = { top: 0, right: 0, bottom: 26, left: 0 };
   const plotH = height - pad.top - pad.bottom;
   const plotW = width - pad.left - pad.right;
-  const laneY = 4;
+  const laneY = 3;
   const baselineY = laneY + LOAD_LANE_HEIGHT;
 
   // Every hook runs before any early return, so the hook order is identical on
@@ -91,7 +93,6 @@ export default function Ribbon({ prices, loads, slotMinutes, slots }: Props) {
 
   // One row per load in the lane, so overlapping windows stay legible.
   const laneRows = useMemo(() => {
-    const perRow = 9;
     return loads.map((load, i) => {
       const bar = load.slots
         .map((slot, k) => ({ slot, watts: load.watts[k] ?? 0 }))
@@ -100,7 +101,7 @@ export default function Ribbon({ prices, loads, slotMinutes, slots }: Props) {
       return {
         load,
         bar,
-        y: laneY + 2 + (i % 3) * perRow,
+        y: laneY + 3 + (i % 3) * ROW_H,
       };
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
@@ -161,13 +162,22 @@ export default function Ribbon({ prices, loads, slotMinutes, slots }: Props) {
           strokeWidth={1.5}
         />
 
-        {/* The load lane, separated from the curve by that baseline. */}
+        {/* The load lane: a recessed track, clearly separate from the curve, so
+            a block reads as an object placed on a shelf rather than a mark
+            drawn over data. */}
+        <rect
+          x={pad.left}
+          y={laneY}
+          width={plotW}
+          height={LOAD_LANE_HEIGHT}
+          fill="var(--paper-2)"
+        />
         <line
           x1={pad.left}
           x2={pad.left + plotW}
           y1={laneY}
           y2={laneY}
-          stroke="var(--hair)"
+          stroke="var(--ink)"
           strokeWidth={1}
         />
 
@@ -178,8 +188,8 @@ export default function Ribbon({ prices, loads, slotMinutes, slots }: Props) {
               className="load-block"
               x={pad.left + draw.slot * geometry.slotW + 0.8}
               y={y}
-              width={Math.max(geometry.slotW - 1.6, 3)}
-              height={6}
+              width={Math.max(geometry.slotW - 1.4, 4)}
+              height={BLOCK_H}
               rx={0}
               fill={load.color}
             />

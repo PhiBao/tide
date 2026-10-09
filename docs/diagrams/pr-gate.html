@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tide's PR gate</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --paper: #f4f2ec; --ink: #14161c; --muted: #4a4f5c; --soft: #8b909c;
+      --accent: #0d6e6e; --accent-tint: rgba(13,110,110,0.08); --link: #a8253c;
+      --rule: #d5d1c4; --rule-solid: #b9b4a5;
+      --font-sans: 'Noto Sans','Geist',system-ui,sans-serif;
+      --font-serif: 'Instrument Serif','Noto Serif',serif;
+      --font-mono: 'Geist Mono',ui-monospace,monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--paper); color: var(--ink);
+           min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 1.5rem; }
+    .frame { max-width: 940px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--soft); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 400; margin-bottom: 1.4rem; }
+    .nm { font-size: 12px; font-weight: 600; fill: var(--ink); }
+    .sl { font-family: var(--font-mono); font-size: 9px; fill: var(--soft); }
+    .tg { font-family: var(--font-mono); font-size: 7px; font-weight: 500; letter-spacing: 0.16em; fill: var(--soft); text-transform: uppercase; }
+  </style>
+</head>
+<body>
+<div class="frame">
+  <div class="eyebrow">Tide · the loop the hackathon is about</div>
+  <h1>Every PR, tested against its own build</h1>
+  <div class="diagram-container">
+  <svg viewBox="0 0 820 340" width="820" min-width="820" role="img" aria-labelledby="gate-title gate-desc">
+    <title id="gate-title">Tide's PR gate</title>
+    <desc id="gate-desc">A pull request runs checks, is deployed to a uniquely named Cloudflare preview, smoke-probed, and only then tested by TestSprite against that exact preview URL; the result is a required status check that blocks the merge.</desc>
+
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#4a4f5c" stroke-width="1.2"/>
+      </marker>
+      <marker id="ara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#0d6e6e" stroke-width="1.4"/>
+      </marker>
+    </defs>
+
+    <!-- swimlane spine: 5 stages -->
+    <rect x="16" y="34" width="788" height="216" rx="8" fill="rgba(20,22,28,0.02)" stroke="#d5d1c4" stroke-width="0.8"/>
+
+    <!-- stage nodes -->
+    <rect x="34" y="72" width="132" height="140" rx="6" fill="rgba(20,22,28,0.10)" stroke="#8b909c" stroke-width="1"/>
+    <rect x="44" y="80" width="40" height="13" rx="2" fill="rgba(20,22,28,0.06)"/>
+    <text x="50" y="90" class="tg">stage 1</text>
+    <text x="44" y="113" class="nm">Checks</text>
+    <text x="44" y="129" class="sl">fmt · clippy -D</text>
+    <text x="44" y="142" class="sl">cargo test</text>
+    <text x="44" y="155" class="sl">102 tests</text>
+    <text x="44" y="177" class="sl">fails fast, costs</text>
+    <text x="44" y="190" class="sl">no credits</text>
+
+    <rect x="196" y="72" width="140" height="140" rx="6" fill="#ffffff" stroke="#14161c" stroke-width="1.2"/>
+    <rect x="206" y="80" width="52" height="13" rx="2" fill="rgba(20,22,28,0.05)"/>
+    <text x="212" y="90" class="tg">stage 2</text>
+    <text x="206" y="113" class="nm">Preview</text>
+    <text x="206" y="129" class="sl">wrangler preview</text>
+    <text x="206" y="142" class="sl">--name pr-&lt;number&gt;</text>
+    <text x="206" y="164" class="sl">pr-123-tide.</text>
+    <text x="206" y="177" class="sl">kiter0211.</text>
+    <text x="206" y="190" class="sl">workers.dev</text>
+
+    <rect x="366" y="72" width="128" height="140" rx="6" fill="#ffffff" stroke="#14161c" stroke-width="1.2"/>
+    <rect x="376" y="80" width="44" height="13" rx="2" fill="rgba(20,22,28,0.05)"/>
+    <text x="382" y="90" class="tg">stage 3</text>
+    <text x="376" y="113" class="nm">Smoke probe</text>
+    <text x="376" y="129" class="sl">curl /api/health</text>
+    <text x="376" y="142" class="sl">5 retries, 5s apart</text>
+    <text x="376" y="164" class="sl">a dead preview stops</text>
+    <text x="376" y="177" class="sl">here — TestSprite is</text>
+    <text x="376" y="190" class="sl">never invoked</text>
+
+    <rect x="524" y="72" width="132" height="140" rx="6" fill="#ffffff" stroke="#14161c" stroke-width="1.2"/>
+    <rect x="534" y="80" width="52" height="13" rx="2" fill="rgba(20,22,28,0.05)"/>
+    <text x="540" y="90" class="tg">stage 4</text>
+    <text x="534" y="113" class="nm">TestSprite</text>
+    <text x="534" y="129" class="sl">test run --all</text>
+    <text x="534" y="142" class="sl">--target-url $PREVIEW</text>
+    <text x="534" y="164" class="sl">--report junit</text>
+    <text x="534" y="177" class="sl">max-concurrency 5</text>
+    <text x="534" y="190" class="sl">18 UI tests</text>
+
+    <rect x="686" y="72" width="102" height="140" rx="6" fill="rgba(13,110,110,0.08)" stroke="#0d6e6e" stroke-width="1.4"/>
+    <rect x="696" y="80" width="34" height="13" rx="2" fill="rgba(13,110,110,0.12)"/>
+    <text x="702" y="90" class="tg" fill="#0d6e6e">gate</text>
+    <text x="696" y="113" class="nm" fill="#0d6e6e">Merge</text>
+    <text x="696" y="129" class="sl">required status</text>
+    <text x="696" y="142" class="sl">check</text>
+    <text x="696" y="164" class="sl">red → diagnose</text>
+    <text x="696" y="177" class="sl">→ fix → green</text>
+
+    <!-- connectors -->
+    <path d="M 166 142 H 192" fill="none" stroke="#4a4f5c" stroke-width="1.2" marker-end="url(#ar)"/>
+    <path d="M 336 142 H 362" fill="none" stroke="#4a4f5c" stroke-width="1.2" marker-end="url(#ar)"/>
+    <path d="M 494 142 H 520" fill="none" stroke="#a8253c" stroke-width="1.3" marker-end="url(#ar)"/>
+    <path d="M 656 142 H 682" fill="none" stroke="#0d6e6e" stroke-width="1.4" marker-end="url(#ara)"/>
+
+    <!-- the headline callout -->
+    <rect x="196" y="238" width="592" height="46" rx="6" fill="rgba(13,110,110,0.06)" stroke="rgba(13,110,110,0.4)" stroke-width="1"/>
+    <text x="212" y="258" class="nm" fill="#0d6e6e">The target URL is minted by the workflow, never guessed.</text>
+    <text x="212" y="274" class="sl" fill="#4a4f5c">TestSprite's GitHub App needs a URL pattern like {branch}-worker.domain, but Cloudflare's branch→DNS-label transform is undocumented.</text>
+
+    <!-- footer note -->
+    <text x="16" y="312" class="sl">Fork PRs are skipped: no repository secrets, so no spend and no permanently-red check.</text>
+    <text x="16" y="328" class="sl">One concurrency group per PR, so a rapid push sequence cannot queue five runs and burn five suites of credits.</text>
+  </svg>
+  </div>
+</div>
+</body>
+</html>

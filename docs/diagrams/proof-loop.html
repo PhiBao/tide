@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tide's proof loop</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --paper: #f4f2ec; --ink: #14161c; --muted: #4a4f5c; --soft: #8b909c;
+      --accent: #0d6e6e; --accent-tint: rgba(13,110,110,0.08); --link: #a8253c;
+      --rule: #d5d1c4; --rule-solid: #b9b4a5;
+      --font-sans: 'Noto Sans','Geist',system-ui,sans-serif;
+      --font-serif: 'Instrument Serif','Noto Serif',serif;
+      --font-mono: 'Geist Mono',ui-monospace,monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--paper); color: var(--ink);
+           min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 1.5rem; }
+    .frame { max-width: 900px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.62rem; font-weight: 500; letter-spacing: 0.18em;
+               text-transform: uppercase; color: var(--soft); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 400; margin-bottom: 1.4rem; }
+    .nm { font-size: 12px; font-weight: 600; fill: var(--ink); }
+    .sl { font-family: var(--font-mono); font-size: 9px; fill: var(--soft); }
+    .tg { font-family: var(--font-mono); font-size: 7px; font-weight: 500; letter-spacing: 0.16em; fill: var(--soft); text-transform: uppercase; }
+  </style>
+</head>
+<body>
+<div class="frame">
+  <div class="eyebrow">Tide · the technical wedge</div>
+  <h1>The optimiser argues its own case</h1>
+  <div class="diagram-container">
+  <svg viewBox="0 0 700 396" width="700" min-width="700" role="img" aria-labelledby="loop-title loop-desc">
+    <title id="loop-title">Tide's proof loop</title>
+    <desc id="loop-desc">A scenario is solved twice: once by the greedy-and-local-search solver, and once by a brute-force oracle. A lower bound computed by relaxing the site cap proves optimality; the oracle independently confirms it on small instances.</desc>
+
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#4a4f5c" stroke-width="1.2"/>
+      </marker>
+      <marker id="ara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#0d6e6e" stroke-width="1.4"/>
+      </marker>
+    </defs>
+
+    <!-- input -->
+    <rect x="24" y="152" width="150" height="92" rx="6" fill="rgba(20,22,28,0.10)" stroke="#8b909c" stroke-width="1"/>
+    <rect x="34" y="160" width="40" height="13" rx="2" fill="rgba(20,22,28,0.06)"/>
+    <text x="40" y="170" class="tg">in</text>
+    <text x="34" y="193" class="nm">Scenario</text>
+    <text x="34" y="207" class="sl">loads · deadlines</text>
+    <text x="34" y="220" class="sl">site cap · prices</text>
+
+    <!-- solver -->
+    <rect x="238" y="152" width="168" height="92" rx="6" fill="#ffffff" stroke="#14161c" stroke-width="1.2"/>
+    <rect x="248" y="160" width="34" height="13" rx="2" fill="rgba(20,22,28,0.05)"/>
+    <text x="254" y="170" class="tg">step 1</text>
+    <text x="248" y="193" class="nm">Greedy + local search</text>
+    <text x="248" y="207" class="sl">urgency-first, cheapest slot</text>
+    <text x="248" y="220" class="sl">bounded: 24 rounds, &lt;2 ms</text>
+
+    <!-- certificate -->
+    <rect x="470" y="58" width="206" height="92" rx="6" fill="rgba(13,110,110,0.08)" stroke="#0d6e6e" stroke-width="1.4"/>
+    <rect x="480" y="66" width="62" height="13" rx="2" fill="rgba(13,110,110,0.12)"/>
+    <text x="486" y="76" class="tg" fill="#0d6e6e">step 2</text>
+    <text x="480" y="99" class="nm">Relaxation bound</text>
+    <text x="480" y="113" class="sl">drop the site cap → loads decouple</text>
+    <text x="480" y="126" class="sl">Σ per-load optima is a valid floor</text>
+
+    <!-- oracle -->
+    <rect x="470" y="246" width="206" height="92" rx="6" fill="#ffffff" stroke="#14161c" stroke-width="1.2"/>
+    <rect x="480" y="254" width="44" height="13" rx="2" fill="rgba(20,22,28,0.05)"/>
+    <text x="486" y="264" class="tg">step 3</text>
+    <text x="480" y="287" class="nm">Brute-force oracle</text>
+    <text x="480" y="301" class="sl">enumerate every schedule</text>
+    <text x="480" y="314" class="sl">node budget → refuses if too large</text>
+
+    <!-- connectors -->
+    <path d="M 174 198 H 234" fill="none" stroke="#4a4f5c" stroke-width="1.2" marker-end="url(#ar)"/>
+    <!-- solver -> bound -->
+    <path d="M 406 168 V 128 Q 406 118 416 118 H 464" fill="none" stroke="#0d6e6e" stroke-width="1.4" marker-end="url(#ara)"/>
+    <rect x="398" y="136" width="52" height="13" fill="#f4f2ec"/>
+    <text x="424" y="146" class="sl" text-anchor="middle" fill="#0d6e6e">compare</text>
+    <!-- solver -> oracle -->
+    <path d="M 406 228 V 288 Q 406 298 416 298 H 464" fill="none" stroke="#4a4f5c" stroke-width="1.1" marker-end="url(#ar)"/>
+    <rect x="416" y="276" width="52" height="13" fill="#f4f2ec"/>
+    <text x="442" y="286" class="sl" text-anchor="middle">check</text>
+
+    <!-- verdict -->
+    <rect x="238" y="300" width="168" height="56" rx="6" fill="rgba(13,110,110,0.06)" stroke="#0d6e6e" stroke-width="1.2"/>
+    <text x="250" y="326" class="nm" fill="#0d6e6e">Proved optimal</text>
+    <text x="250" y="341" class="sl">cost == bound → no cheaper exists</text>
+
+    <path d="M 470 88 V 42 Q 470 32 460 32 H 330" fill="none" stroke="#0d6e6e" stroke-width="1.4" marker-end="url(#ara)"/>
+    <path d="M 528 292 V 364 Q 528 374 518 374 H 340" fill="none" stroke="#0d6e6e" stroke-width="1.3" marker-end="url(#ara)"/>
+
+    <text x="24" y="30" style="font-family:var(--font-serif); font-style:italic; font-size:13px" fill="#4a4f5c">
+      Two independent checks, and the cheaper one is the one that scales.
+    </text>
+    <text x="24" y="384" class="sl">bound holds on any instance · oracle is exact up to its budget</text>
+  </svg>
+  </div>
+</div>
+</body>
+</html>
