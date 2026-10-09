@@ -115,7 +115,7 @@ Improvement Bonus as a parallel objective.
 
 | Criterion | How Tide answers it |
 |---|---|
-| 40% Project Quality | A polished, deterministic app with deliberate loading, empty and error states; 86 Rust tests and 16 HTTP tests behind it. |
+| 40% Project Quality | A polished, deterministic app with deliberate loading, empty and error states; 85 Rust tests behind it (55 core unit, 14 solver integration, 16 HTTP). |
 | 40% Tests That Run Themselves | 18 UI tests, all passing, wired into CI on every PR and holding the merge. Coverage spans tariff switching, load inventory manipulation, schedule recomputation, and the cost comparison. |
 | 20% Innovation | The proof-backed optimiser, the exact rate engine, and the per-PR preview architecture |
 | ∞ Engagement | Long-form write-ups, Discord and X participation |
@@ -200,7 +200,7 @@ with it.
 git clone https://github.com/PhiBao/tide && cd tide
 
 # Rust workspace
-cargo test --workspace          # 102 tests
+cargo test --workspace          # 85 tests
 
 # Frontend
 pnpm --dir web install
@@ -224,7 +224,7 @@ NEXT_PUBLIC_API_BASE=https://tide.kiter0211.workers.dev
 
 | Command | What it does |
 |---|---|
-| `cargo test --workspace` | The full suite: 86 core tests, 16 API tests |
+| `cargo test --workspace` | The full suite: 85 tests |
 | `cargo clippy --workspace --tests -- -D warnings` | Lint, warnings are errors |
 | `cargo fmt --all -- --check` | Format |
 | `pnpm --dir web build` | Static frontend export |
@@ -258,11 +258,11 @@ What is real, what is a fixture, and what is not:
 
 | Claim | Status |
 |---|---|
-| The rate engine (TOU windows, sub-slot attribution, line-item bills) | **Real and complete.** 55 tests including hand-worked billing fixtures. |
+| The rate engine (TOU windows, sub-slot attribution, line-item bills) | **Real and complete.** 55 core tests including hand-worked billing fixtures. |
 | The scheduler | **Real.** Greedy + local search, proven optimal against a lower bound. |
 | The optimality certificate | **Real.** Valid lower bound, checked per solve. |
 | The brute-force oracle | **Real.** Exhaustive enumeration with a documented node budget; refuses rather than guessing on large instances. |
-| DST handling | **Real.** US and EU rules modelled explicitly, with the local-standard/local-daylight convention distinction the US requires. 12 zone tests. |
+| DST handling | **Real.** US and EU rules modelled explicitly, with the local-standard/local-daylight convention distinction the US requires. Covered by the zone tests. |
 | Bundled tariffs | **Real published rate structures**, with source URLs and retrieval dates recorded in the API response. Not live feeds — a tariff is a rate *shape*, and Tide's job is the arithmetic over it. |
 | Usage series | **Not simulated.** You supply your own; the bundled scenario is clearly a demonstration set. There is no "demo mode" that fakes usage. |
 | Hardware integration | **Not implemented, and not claimed.** Tide produces the *decision*; it does not actuate a plug. See Limitations. |
