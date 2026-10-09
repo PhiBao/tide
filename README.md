@@ -234,6 +234,13 @@ NEXT_PUBLIC_API_BASE=https://tide.kiter0211.workers.dev
 
 ## Demo
 
+**The proof is a pull request.** [PR #1](https://github.com/PhiBao/tide/pull/1) is
+the submission artefact: its checks tab shows `Checks`, `Preview` and
+`TestSprite` all green, with TestSprite dispatching 18 tests against
+`https://pr-1-tide.kiter0211.workers.dev` — the preview built from that PR's own
+commit — and reporting 18/18 passed. The live URL below is deployed from `main`
+by the same pipeline.
+
 **Try this first:** open the live URL and watch the ribbon. The trough on the
 left is the cheap overnight window; the crimson wall to its right is the
 expensive day. Press **Re-solve** and watch the blocks settle into the trough.
