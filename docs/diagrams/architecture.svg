@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 452" width="760" min-width="760" role="img" aria-labelledby="arch-title arch-desc" style="font-family:var(--font-sans)" id="architecture-root">
+    <title id="arch-title">Tide architecture</title>
+    <desc id="arch-desc">A browser talks to a single Cloudflare Worker that serves both the static frontend and the Rust API; the API is a thin Axum shell over a pure domain crate shared with the test suite.</desc>
+
+    <defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #architecture-root { --paper:      #f4f2ec;
+      --paper-2:    #ece9e0;
+      --ink:        #14161c;
+      --muted:      #4a4f5c;
+      --soft:       #8b909c;
+      --accent:     #0d6e6e;
+      --accent-tint: rgba(13,110,110,0.08);
+      --link:       #a8253c;
+      --rule:       #d5d1c4;
+      --rule-solid: #b9b4a5;
+      --font-sans:  'Noto Sans', 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', 'Noto Serif', 'Noto Serif KR', serif;
+      --font-mono:  'Geist Mono', ui-monospace, monospace; }
+      #architecture-root { font-family: var(--font-sans); color: var(--ink); }
+      #architecture-root .diagram-container { width: 100%; overflow-x: auto; }
+      #architecture-root text { font-family: var(--font-sans); }
+      #architecture-root .nm { font-size: 12px; font-weight: 600; fill: var(--ink); }
+      #architecture-root .sl { font-family: var(--font-mono); font-size: 9px; fill: var(--soft); }
+      #architecture-root .tg { font-family: var(--font-mono); font-size: 7px; font-weight: 500; letter-spacing: 0.16em; fill: var(--soft); text-transform: uppercase; }
+      #architecture-root .zn { font-family: var(--font-mono); font-size: 8px; font-weight: 500; letter-spacing: 0.14em; fill: var(--muted); text-transform: uppercase; }</style>
+      <marker id="architecture-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#4a4f5c" stroke-width="1.2"/>
+      </marker>
+      <marker id="architecture-arl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#a8253c" stroke-width="1.2"/>
+      </marker>
+      <marker id="architecture-ara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9" fill="none" stroke="#0d6e6e" stroke-width="1.4"/>
+      </marker>
+    </defs>
+
+    <!-- ================= zones ================= -->
+    <rect x="12" y="34" width="248" height="392" rx="8" fill="#14161c" fill-opacity="0.02" stroke="#d5d1c4" stroke-width="0.8"/>
+    <rect x="284" y="34" width="464" height="392" rx="8" fill="#0d6e6e" fill-opacity="0.04" stroke="#0d6e6e" stroke-opacity="0.35" stroke-width="0.9" stroke-dasharray="4,4"/>
+    <rect x="298" y="86" width="196" height="128" rx="8" fill="#14161c" fill-opacity="0.03" stroke="#14161c" stroke-opacity="0.3" stroke-width="0.8"/>
+    <rect x="516" y="86" width="216" height="128" rx="8" fill="#14161c" fill-opacity="0.03" stroke="#14161c" stroke-opacity="0.3" stroke-width="0.8"/>
+
+    <!-- zone labels sit on a paper mask over the boundary -->
+    <rect x="24" y="40" width="150" height="14" fill="#f4f2ec"/>
+    <text x="30" y="51" class="zn">Client · static assets</text>
+    <rect x="296" y="40" width="196" height="14" fill="#f4f2ec"/>
+    <text x="302" y="51" class="zn">Cloudflare Worker · wasm32</text>
+
+    <!-- ================= arrows (drawn first, behind nodes) ================= -->
+    <!-- browser -> worker : /api/* and assets -->
+    <path d="M 258 150 H 296" fill="none" stroke="#a8253c" stroke-width="1.3" marker-end="url(#architecture-arl)"/>
+    <rect x="236" y="140" width="46" height="13" fill="#f4f2ec"/>
+    <text x="259" y="150" class="sl" text-anchor="middle" fill="#a8253c">/api/*</text>
+
+    <!-- router -> core (accent: the headline path) -->
+    <path d="M 396 152 V 172 Q 396 182 406 182 H 408" fill="none" stroke="#0d6e6e" stroke-width="1.5" marker-end="url(#architecture-ara)"/>
+    <!-- router -> store -->
+    <path d="M 470 152 V 176 Q 470 186 480 186 H 484" fill="none" stroke="#4a4f5c" stroke-width="1.1" marker-end="url(#architecture-ar)"/>
+
+    <!-- test harness feeds the same crate (dashed = offline, pure) -->
+    <path d="M 620 216 V 246 Q 620 256 610 256 H 400" fill="none" stroke="#4a4f5c" stroke-width="1.1" stroke-dasharray="4,3" marker-end="url(#architecture-ar)"/>
+    <rect x="470" y="245" width="94" height="13" fill="#f4f2ec"/>
+    <text x="517" y="255" class="sl" text-anchor="middle">same crate</text>
+
+    <!-- ================= nodes ================= -->
+    <!-- browser -->
+    <rect x="40" y="104" width="192" height="92" rx="6" fill="#ffffff" stroke="#14161c" stroke-width="1.2"/>
+    <rect x="48" y="112" width="44" height="13" rx="2" fill="#14161c" fill-opacity="0.05"/>
+    <text x="54" y="122" class="tg">app</text>
+    <text x="54" y="146" class="nm">Next.js · static export</text>
+    <text x="54" y="160" class="sl">output: 'export' → web/out</text>
+    <text x="54" y="174" class="sl">no UI library, hand-built ribbon</text>
+
+    <!-- inside the worker zone -->
+    <rect x="310" y="96" width="172" height="56" rx="6" fill="#ffffff" stroke="#14161c" stroke-width="1.2"/>
+    <rect x="318" y="104" width="34" height="13" rx="2" fill="#14161c" fill-opacity="0.05"/>
+    <text x="324" y="114" class="tg">api</text>
+    <text x="324" y="135" class="nm">Axum router</text>
+    <text x="324" y="147" class="sl">tide-api · builds to wasm</text>
+
+    <rect x="310" y="182" width="172" height="56" rx="6" fill="#ffffff" stroke="#14161c" stroke-width="1.2"/>
+    <rect x="318" y="190" width="30" height="13" rx="2" fill="#14161c" fill-opacity="0.05"/>
+    <text x="324" y="200" class="tg">core</text>
+    <text x="324" y="221" class="nm">tide-core</text>
+    <text x="324" y="233" class="sl">pure · no I/O · no floats</text>
+
+    <!-- oracle + verify: the focal pair -->
+    <rect x="528" y="96" width="192" height="56" rx="6" fill="#0d6e6e" fill-opacity="0.08" stroke="#0d6e6e" stroke-width="1.4"/>
+    <rect x="536" y="104" width="44" height="13" rx="2" fill="#0d6e6e" fill-opacity="0.12"/>
+    <text x="542" y="114" class="tg" fill="#0d6e6e">verify</text>
+    <text x="536" y="135" class="nm">Oracle + certificate</text>
+    <text x="536" y="147" class="sl">brute force · relaxation bound</text>
+
+    <rect x="528" y="182" width="192" height="56" rx="6" fill="#ffffff" stroke="#4a4f5c" stroke-width="1.1"/>
+    <rect x="536" y="190" width="40" height="13" rx="2" fill="#14161c" fill-opacity="0.05"/>
+    <text x="542" y="200" class="tg">tests</text>
+    <text x="542" y="221" class="nm">85 Rust tests</text>
+    <text x="542" y="233" class="sl">x86_64 corpus + HTTP tests</text>
+
+    <!-- assets binding -->
+    <rect x="40" y="290" width="672" height="52" rx="6" fill="#14161c" fill-opacity="0.04" stroke="#8b909c" stroke-width="1" stroke-dasharray="4,3"/>
+    <rect x="52" y="298" width="52" height="13" rx="2" fill="#14161c" fill-opacity="0.05"/>
+    <text x="58" y="308" class="tg">assets</text>
+    <text x="52" y="330" class="nm">ASSETS binding · served by the same Worker</text>
+    <text x="700" y="330" class="sl" text-anchor="end">one origin → no CORS, no auth flakiness</text>
+
+    <!-- previews -->
+    <rect x="40" y="360" width="672" height="50" rx="6" fill="#ffffff" stroke="#14161c" stroke-width="1.1"/>
+    <rect x="52" y="368" width="52" height="13" rx="2" fill="#14161c" fill-opacity="0.05"/>
+    <text x="58" y="378" class="tg">ci</text>
+    <text x="52" y="400" class="nm">Every PR → wrangler preview --name pr-&lt;n&gt; → TestSprite --target-url</text>
+    <text x="700" y="400" class="sl" text-anchor="end">blocking status check</text>
+
+    <!-- annotation -->
+    <text x="40" y="442" style="font-family:var(--font-serif); font-style:italic; font-size:13px" fill="#4a4f5c">
+      The rate engine, the solver and the oracle are the same crate in test and in production.
+    </text>
+  </svg>

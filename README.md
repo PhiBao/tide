@@ -66,6 +66,12 @@ its cheapest permitted slots, and the sum of those per-load optima is a **valid
 lower bound** on the coupled problem. If the solver's answer equals that bound,
 it is provably the global optimum — no exhaustive search required.
 
+![The proof loop](docs/diagrams/proof-loop.png)
+
+The certificate is what runs at full scale; the brute-force oracle is the
+independent check that validates the solver on small instances. Both are real,
+and the diagram shows which one carries the load.
+
 The UI shows this as a certificate: `✓ proved optimal`, with the bound and the
 actual cost printed side by side so you can see they are the same number. Every
 energy tool asks you to trust its optimiser. This one argues its own case with
@@ -107,9 +113,17 @@ Improvement Bonus as a parallel objective.
 - **`workers-rs` with the `http` feature** — an Axum router compiles directly to
   wasm, so `AGENTS.md`'s mandated Rust/Axum stack runs on the free tier without
   compromise.
-- **GitHub App / Actions + Cloudflare previews** — every PR is deployed to its
-  own preview and tested against *that* URL by TestSprite, with the result
+- **GitHub Actions + Cloudflare previews** — every PR is deployed to its own
+  preview and tested against *that* URL by TestSprite, with the result
   blocking the merge.
+
+![The PR gate](docs/diagrams/pr-gate.png)
+
+The target URL is minted by the workflow rather than guessed. TestSprite's
+GitHub App route needs a URL *pattern* like `{branch}-worker.domain`, but
+Cloudflare's branch→DNS-label transform is undocumented, so `feature/login` may
+or may not become `feature-login-tide`. Naming the preview `pr-<number>` is
+DNS-safe by construction and removes the guesswork.
 
 **Judging criteria, addressed directly:**
 
@@ -124,28 +138,11 @@ Improvement Bonus as a parallel objective.
 
 ## Architecture
 
-```
-                    ┌──────────────────────────────────────────┐
-   browser  ──────▶ │  Cloudflare Worker  (tide-worker, wasm)  │
-                    │                                          │
-                    │  ┌────────────────────────────────────┐  │
-                    │  │ Axum router  (tide-api)            │  │
-                    │  │  /api/tariffs  /api/horizon        │  │
-                    │  │  /api/solve     /api/solve/verify  │  │
-                    │  │  /api/bills     /api/prices        │  │
-                    │  │  /api/health                       │  │
-                    │  └──────────────┬─────────────────────┘  │
-                    │                 │                        │
-                    │  ┌──────────────▼─────────────────────┐  │
-                    │  │ tide-core  (pure, no I/O, no floats)│  │
-                    │  │  money    civil    zone   timegrid  │  │
-                    │  │  rates    model    solver oracle    │  │
-                    │  │  verify   tariffs                   │  │
-                    │  └────────────────────────────────────┘  │
-                    │                                          │
-                    │  ASSETS binding ──▶ web/out (Next.js)    │
-                    └──────────────────────────────────────────┘
-```
+![Tide architecture](docs/diagrams/architecture.png)
+
+<sub>Source: [`docs/diagrams/architecture.html`](docs/diagrams/architecture.html) ·
+[the proof loop](docs/diagrams/proof-loop.png) ·
+[the PR gate](docs/diagrams/pr-gate.png)</sub>
 
 ### Why `tide-core` is pure
 
@@ -343,4 +340,4 @@ docs/diagrams/   architecture, proof loop, and PR-gate diagrams
 
 ## Licence
 
-MIT OR Apache-2.0.
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. The Rust workspace declares `MIT OR Apache-2.0`, which is the standard dual licence for Rust crates — it keeps the core reusable by other Crates.io packages without forcing a licence choice on them.
