@@ -18,8 +18,11 @@ web/out/
 next-env.d.ts
 
 # --- cloudflare worker build artifacts ---
+# Root-anchored deliberately. An unanchored `worker/` also matches
+# `crates/worker/` — the Worker crate itself — which silently kept the entire
+# crate out of git and broke CI at the first `cargo fmt` invocation.
+/worker/
 /build/
-worker/
 .wrangler/
 
 # --- testsprite local artifacts ---

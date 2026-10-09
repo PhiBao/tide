@@ -1,0 +1,32 @@
+[package]
+name = "tide-worker"
+description = "Cloudflare Worker entrypoint for Tide. Compiles tide-core and tide-api to wasm32-unknown-unknown."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+tide-core = { workspace = true }
+tide-api = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# `http` gives us the hyper/adapter bridge; `axum` enables Router interop.
+worker = { version = "0.8", features = ["http", "axum"] }
+# `Router::call` comes from `tower_service::Service`, which the workers-rs
+# bridging requires (see the upstream axum example).
+tower-service = "0.3"
+axum = { version = "0.8", default-features = false, features = ["json"] }
+http = "1"
+
+# Profile for wasm release builds. `opt-level = "s"` keeps the Worker bundle
+# small; `lto` strips dead code. `panic` is set to unwind by worker-build so a
+# single bad request cannot take down the isolate.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
