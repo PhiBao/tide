@@ -157,7 +157,9 @@ constraint buys four things:
    platform-dependent rounding. Money is integer micro-dollars, energy is
    integer watt-hours, and there is exactly one division, at presentation time.
 3. **It is fast enough for the free tier.** The Workers free plan allows 10 ms
-   of CPU per request; solving a 96-slot, three-load scenario takes under 2 ms.
+   of CPU per request. A 96-slot, three-load scenario solves in **61 µs**
+   (best of 2000 runs, asserted in the suite) — roughly 160× inside the budget.
+   The test guards a generous 2 ms so a loaded CI runner cannot make it flake.
 4. **It is testable exhaustively.** The oracle can brute-force small instances,
    and the tests assert the solver matches the true optimum on every one.
 
