@@ -569,12 +569,7 @@ mod tests {
         // a placeholder here would make the comparison meaningless — an earlier
         // version of this test passed zero and quietly asserted nothing.
         let solution = crate::solver::solve(&sc, &g, &prices).unwrap();
-        let solver_numer = crate::verify::schedule_numer(
-            &solution.schedule,
-            &sc,
-            &g,
-            &prices,
-        );
+        let solver_numer = crate::verify::schedule_numer(&solution.schedule, &sc, &g, &prices);
         let verdict = verify(&sc, &g, &prices, solver_numer, DEFAULT_NODE_BUDGET);
 
         assert!(
@@ -589,7 +584,10 @@ mod tests {
             "the oracle should have found the cheapest legal schedule"
         );
         assert_eq!(verdict.solver_numer, 200_000);
-        assert!(verdict.is_optimal, "the solver must match the oracle exactly");
+        assert!(
+            verdict.is_optimal,
+            "the solver must match the oracle exactly"
+        );
         assert_eq!(verdict.excess_numer, 0);
         assert_eq!(verdict.badge(), "verified: exact optimum");
     }
