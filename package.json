@@ -1,0 +1,24 @@
+{
+  "name": "tide",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A composer for time-varying cost.",
+  "scripts": {
+    "build:worker": "cargo install -q worker-build && worker-build --release",
+    "build:web": "pnpm --dir web build",
+    "build": "npm run build:web && npm run build:worker",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler preview",
+    "dev": "wrangler dev",
+    "test": "cargo test --workspace",
+    "check": "cargo check --workspace --tests",
+    "lint": "cargo clippy --workspace --tests -- -D warnings",
+    "fmt": "cargo fmt --all -- --check"
+  },
+  "devDependencies": {
+    "wrangler": "^4.135.0"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

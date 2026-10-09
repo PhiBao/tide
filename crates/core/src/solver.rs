@@ -287,10 +287,17 @@ fn greedy_place(scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u64]) -
             remaining_cap[s] -= power;
         }
 
-        // Then the reduced-power remainder slot, if any.
+        // Then the reduced-power remainder slot, if any. It must be a slot this
+        // load does not already occupy: a load draws at one power per slot, and
+        // stacking 7 kW and 6 kW into the same 15 minutes would produce a
+        // physically impossible 13 kW draw.
         if decomp.partial_watts > 0 {
-            let mut rest: Vec<usize> =
-                (start..=end).filter(|&s| remaining_cap[s] >= decomp.partial_watts).collect();
+            let used: Vec<u32> = draw.iter().map(|&(s, _)| s).collect();
+            let mut rest: Vec<usize> = (start..=end)
+                .filter(|&s| {
+                    remaining_cap[s] >= decomp.partial_watts && !used.contains(&(s as u32))
+                })
+                .collect();
             rest.sort_by(|&a, &b| {
                 weighted_prices[a].cmp(&weighted_prices[b]).then(a.cmp(&b))
             });

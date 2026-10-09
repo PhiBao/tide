@@ -340,3 +340,52 @@ fn gap_is_zero_when_proved() {
     assert!(sol.diagnostics.is_empty(), "a proved result needs no caveat");
     assert_eq!(sol.lower_bound_micro_usd, sol.schedule.cost_micro_usd);
 }
+
+#[test]
+fn a_load_never_draws_twice_in_one_slot() {
+    // Regression: the greedy placement used to allow the reduced-power
+    // remainder slot to land on a slot already occupied by a full-power draw,
+    // producing a physically impossible 13 kW draw from a 7 kW charger.
+    let g = grid();
+    let prices = overnight_prices();
+    for deadline in [30u32, 50, 70, 95] {
+        let sc = scenario(vec![load("ev", 12, 7, deadline)], 0);
+        let sol = solve(&sc, &g, &prices).unwrap();
+        for (i, p) in sol.schedule.placements.iter().enumerate() {
+            let mut seen = std::collections::BTreeSet::new();
+            for &s in &p.slots {
+                assert!(
+                    seen.insert(s),
+                    "load {} draws in slot {} more than once",
+                    sc.loads[i].id,
+                    s
+                );
+            }
+            for &w in &p.watts {
+                assert!(w <= 7_000, "no draw may exceed the load's own limit");
+            }
+        }
+        // And the site draw must be a real per-slot sum of distinct loads.
+        for &draw in &sol.schedule.site_draw_w {
+            assert!(draw <= 7_000, "a single load cannot exceed its own power: {draw}");
+        }
+    }
+}
+
+#[test]
+fn delivered_energy_always_matches_the_requirement_exactly() {
+    // No over-delivery: asking for 12 kWh must charge for 12 kWh, not 13.8.
+    let g = grid();
+    let prices = overnight_prices();
+    for kwh in [1u64, 5, 12, 20, 37] {
+        let sc = scenario(vec![load("ev", kwh, 7, 95)], 0);
+        let sol = solve(&sc, &g, &prices).unwrap();
+        let p = &sol.schedule.placements[0];
+        assert_eq!(
+            p.delivered_wh.0,
+            kwh * 1_000,
+            "asking for {kwh} kWh must deliver exactly {kwh} kWh"
+        );
+        assert!(!p.unmet);
+    }
+}

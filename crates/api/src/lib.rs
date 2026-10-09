@@ -32,7 +32,6 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tide_core::tariffs::bundled;
 use tide_core::API_VERSION;
 use tide_core::model::{Load, LoadId, Scenario, ScenarioId};
 use tide_core::money::{MicroUsd, Wh};

@@ -1,0 +1,49 @@
+# Wrangler configuration for Tide.
+#
+# Tide is a single Cloudflare Worker that serves both the API and the Next.js
+# static export, so the app has exactly one origin. That matters for the test
+# suite: TestSprite's UI tests run against one URL, and there is no cross-origin
+# boundary to produce auth flakiness or CORS false negatives.
+
+name = "tide"
+main = "crates/worker/build/index.js"
+compatibility_date = "2026-10-09"
+
+# ---------------------------------------------------------------------------
+# Previews
+#
+# Required even when empty. This is what lets `wrangler preview` create a
+# branch-scoped deployment, which is how each pull request gets its own URL to
+# test. See .github/workflows/ci.yml.
+# ---------------------------------------------------------------------------
+previews = { }
+
+# ---------------------------------------------------------------------------
+# Static assets
+#
+# The Next.js build output is served through the ASSETS binding. Requests to
+# /api/* are handled by the Worker's router; everything else falls through to
+# the built frontend. `not_found_handling = "single-page-application"` means a
+# deep link like /s/abc resolves to the SPA shell rather than a 404, so a
+# shared scenario link always loads.
+# ---------------------------------------------------------------------------
+[assets]
+directory = "./web/out"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+# ---------------------------------------------------------------------------
+# Observability
+#
+# Logs are on in production, off in preview, because a preview's logs would be
+# dominated by test-suite traffic rather than real users.
+# ---------------------------------------------------------------------------
+[observability]
+enabled = true
+
+[env.preview]
+name = "tide-preview"
+
+[env.preview.observability]
+enabled = false

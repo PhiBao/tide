@@ -26,10 +26,13 @@ serde_json = "1"
 # ---------------------------------------------------------------------------
 [profile.release]
 opt-level = "s"
-lto = true
+lto = "thin"
 codegen-units = 1
-strip = true
-panic = "abort"
+# `strip` is deliberately off: it can remove the function table that
+# wasm-bindgen's catch wrappers require.
+# Deliberately NOT `panic = "abort"`: the Cloudflare Worker needs to catch a
+# panic in one request and keep serving the rest, and worker-build's
+# `--panic-unwind` (see package.json) requires unwinding support.
 
 [profile.bench]
 debug = true

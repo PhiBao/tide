@@ -11,7 +11,7 @@ repository.workspace = true
 tide-core = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-axum = "0.8"
+axum = { version = "0.8", default-features = false, features = ["json"] }
 tower-http = { version = "0.6", features = ["cors", "limit", "trace"] }
 http = "1"
 

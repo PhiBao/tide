@@ -133,6 +133,12 @@ impl LocalZone {
         dst: None,
     };
 
+    /// UTC with a real name, for tariffs that want to display one.
+    #[must_use]
+    pub fn utc_named() -> Self {
+        Self { name: "UTC".into(), standard_offset_minutes: 0, dst: None }
+    }
+
     /// US Eastern.
     #[must_use]
     pub fn us_eastern() -> Self {
