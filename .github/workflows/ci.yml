@@ -96,8 +96,11 @@ jobs:
         with:
           version: 10
 
+      # The lockfile lives in web/, so the install has to happen there. Running
+      # it from the repo root finds no lockfile and `--frozen-lockfile` fails
+      # outright rather than resolving fresh versions.
       - name: Build frontend
-        run: pnpm install --frozen-lockfile && pnpm --dir web build
+        run: pnpm --dir web install --frozen-lockfile && pnpm --dir web build
 
       - name: Build worker
         run: cargo install -q worker-build && worker-build --release
