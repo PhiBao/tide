@@ -46,8 +46,8 @@ pub mod zone;
 /// misreading a payload.
 pub const API_VERSION: u32 = 1;
 
-pub use money::{MicroUsd, MicroUsdPerKwh, Watts, Wh};
 pub use model::{Load, LoadId, Scenario, ScenarioId, Schedule};
+pub use money::{MicroUsd, MicroUsdPerKwh, Watts, Wh};
 pub use oracle::OracleVerdict;
 pub use rates::{Bill, BillLine, Tariff, Usage};
 pub use solver::ScheduleSolution;
@@ -67,7 +67,10 @@ pub enum DomainError {
     /// The tariff leaves part of the week unpriced.
     TariffGap { gaps: usize },
     /// A load's constraints cannot be satisfied in this horizon.
-    Infeasible { load: LoadId, reason: InfeasibleReason },
+    Infeasible {
+        load: LoadId,
+        reason: InfeasibleReason,
+    },
     /// The oracle was asked to solve an instance larger than it can exhaust.
     OracleTooLarge { slots: u32, loads: usize },
 }

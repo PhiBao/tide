@@ -49,9 +49,7 @@ pub fn verify_solution(
         .map(|n| crate::money::MicroUsd(numer_to_i64(n, grid)));
     let excess = verdict
         .optimal_numer
-        .map(|opt| {
-            crate::money::MicroUsd(numer_to_i64(solver_numer.saturating_sub(opt), grid))
-        })
+        .map(|opt| crate::money::MicroUsd(numer_to_i64(solver_numer.saturating_sub(opt), grid)))
         .unwrap_or(crate::money::MicroUsd::ZERO);
 
     Verification {
@@ -103,8 +101,8 @@ pub fn schedule_numer(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::money::Wh;
     use crate::model::{Load, LoadId, Scenario, ScenarioId};
+    use crate::money::Wh;
     use crate::solver::solve;
     use crate::timegrid::SlotGrid;
 
@@ -132,7 +130,7 @@ mod tests {
                     deadline_slot: 23,
                     earliest_slot: 0,
                     prefer_contiguous: false,
-            natural_start_slot: 0,
+                    natural_start_slot: 0,
                 },
                 Load {
                     id: LoadId::new("b"),
@@ -142,13 +140,19 @@ mod tests {
                     deadline_slot: 23,
                     earliest_slot: 0,
                     prefer_contiguous: false,
-            natural_start_slot: 0,
+                    natural_start_slot: 0,
                 },
             ],
         };
         let solution = solve(&scenario, &grid, &prices).unwrap();
         let numer = schedule_numer(&solution.schedule, &scenario, &grid, &prices);
-        let v = verify_solution(&scenario, &grid, &prices, numer, crate::oracle::DEFAULT_NODE_BUDGET);
+        let v = verify_solution(
+            &scenario,
+            &grid,
+            &prices,
+            numer,
+            crate::oracle::DEFAULT_NODE_BUDGET,
+        );
         assert!(v.enumerated);
         assert!(v.is_optimal, "the oracle should confirm: {v:?}");
         assert_eq!(v.badge, "verified: exact optimum");

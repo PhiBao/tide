@@ -32,13 +32,13 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tide_core::API_VERSION;
 use tide_core::model::{Load, LoadId, Scenario, ScenarioId};
 use tide_core::money::{MicroUsd, Wh};
 use tide_core::oracle::{solve_baseline, verify as oracle_verify, DEFAULT_NODE_BUDGET};
 use tide_core::rates::{Bill, Tariff, Usage};
 use tide_core::solver::{solve, Optimality};
 use tide_core::timegrid::{SlotGrid, MAX_SLOTS};
+use tide_core::API_VERSION;
 
 /// Shared application state.
 #[derive(Clone)]
@@ -50,12 +50,16 @@ impl AppState {
     /// Build state with the bundled tariffs.
     #[must_use]
     pub fn new() -> Self {
-        Self { tariffs: Arc::new(tide_core::tariffs::bundled()) }
+        Self {
+            tariffs: Arc::new(tide_core::tariffs::bundled()),
+        }
     }
 
     #[must_use]
     pub fn with_tariffs(tariffs: Vec<Tariff>) -> Self {
-        Self { tariffs: Arc::new(tariffs) }
+        Self {
+            tariffs: Arc::new(tariffs),
+        }
     }
 
     #[must_use]
@@ -162,7 +166,8 @@ async fn prices(State(state): State<AppState>, Json(req): Json<PriceRequest>) ->
 /// client never has to know one.
 async fn horizon(State(state): State<AppState>, Json(req): Json<HorizonRequest>) -> Response {
     let Some(tariff) = state.tariff(&req.tariff_id) else {
-        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id)).into_response();
+        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id))
+            .into_response();
     };
     if req.slots == 0 || req.slots > MAX_SLOTS {
         return ApiError::unprocessable(format!(
@@ -206,7 +211,8 @@ async fn solve_scenario(State(state): State<AppState>, Json(req): Json<SolveRequ
         return resp;
     }
     let Some(tariff) = state.tariff(&req.tariff_id) else {
-        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id)).into_response();
+        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id))
+            .into_response();
     };
 
     match solve(&scenario, &grid, &weighted_prices(tariff, &grid)) {
@@ -214,14 +220,19 @@ async fn solve_scenario(State(state): State<AppState>, Json(req): Json<SolveRequ
             let baseline = solve_baseline(&scenario, &grid, &weighted_prices(tariff, &grid));
             Json(SolveResponse {
                 schedule: ScheduleResponse {
-                    placements: solution.schedule.placements.iter().map(|p| PlacementResponse {
-                        load: p.load.0.clone(),
-                        slots: p.slots.clone(),
-                        watts: p.watts.clone(),
-                        delivered_wh: p.delivered_wh.0,
-                        unmet: p.unmet,
-                        contiguous: p.contiguous,
-                    }).collect(),
+                    placements: solution
+                        .schedule
+                        .placements
+                        .iter()
+                        .map(|p| PlacementResponse {
+                            load: p.load.0.clone(),
+                            slots: p.slots.clone(),
+                            watts: p.watts.clone(),
+                            delivered_wh: p.delivered_wh.0,
+                            unmet: p.unmet,
+                            contiguous: p.contiguous,
+                        })
+                        .collect(),
                     site_draw_w: solution.schedule.site_draw_w.clone(),
                     cost_micro_usd: solution.schedule.cost_micro_usd.0,
                 },
@@ -255,7 +266,8 @@ async fn verify_scenario(State(state): State<AppState>, Json(req): Json<SolveReq
         return resp;
     }
     let Some(tariff) = state.tariff(&req.tariff_id) else {
-        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id)).into_response();
+        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id))
+            .into_response();
     };
     let prices = weighted_prices(tariff, &grid);
 
@@ -266,12 +278,18 @@ async fn verify_scenario(State(state): State<AppState>, Json(req): Json<SolveReq
             let verdict = oracle_verify(&scenario, &grid, &prices, solver_numer, budget);
             Json(VerifyResponse {
                 solver_cost_micro_usd: solution.schedule.cost_micro_usd.0,
-                optimal_cost_micro_usd: verdict.optimal_numer.map(|n| numer_to_micro_usd(n, &grid).0),
+                optimal_cost_micro_usd: verdict
+                    .optimal_numer
+                    .map(|n| numer_to_micro_usd(n, &grid).0),
                 is_optimal: verdict.is_optimal,
                 badge: verdict.badge(),
                 nodes_explored: match verdict.outcome {
-                    tide_core::oracle::OracleOutcome::Exhaustive { nodes_explored, .. } => nodes_explored,
-                    tide_core::oracle::OracleOutcome::BudgetExceeded { nodes_explored } => nodes_explored,
+                    tide_core::oracle::OracleOutcome::Exhaustive { nodes_explored, .. } => {
+                        nodes_explored
+                    }
+                    tide_core::oracle::OracleOutcome::BudgetExceeded { nodes_explored } => {
+                        nodes_explored
+                    }
                 },
                 enumerated: matches!(
                     verdict.outcome,
@@ -290,7 +308,8 @@ async fn bills(State(state): State<AppState>, Json(req): Json<BillRequest>) -> R
         Err(e) => return e.into_response(),
     };
     let Some(tariff) = state.tariff(&req.tariff_id) else {
-        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id)).into_response();
+        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id))
+            .into_response();
     };
     if let Some(resp) = gap_response(tariff) {
         return resp;
@@ -328,7 +347,11 @@ async fn not_found() -> Response {
 // ---------------------------------------------------------------------------
 
 fn weighted_prices(tariff: &Tariff, grid: &SlotGrid) -> Vec<u64> {
-    tariff.price_series(grid).into_iter().map(|p| p.weighted_price).collect()
+    tariff
+        .price_series(grid)
+        .into_iter()
+        .map(|p| p.weighted_price)
+        .collect()
 }
 
 fn resolve_grid(g: &GridRequest) -> Result<SlotGrid, ApiError> {
@@ -338,7 +361,11 @@ fn resolve_grid(g: &GridRequest) -> Result<SlotGrid, ApiError> {
         Ok(grid)
     } else {
         Err(ApiError::unprocessable(
-            faults.iter().map(|f| f.to_string()).collect::<Vec<_>>().join("; "),
+            faults
+                .iter()
+                .map(|f| f.to_string())
+                .collect::<Vec<_>>()
+                .join("; "),
         ))
     }
 }
@@ -350,7 +377,11 @@ fn fault_response(grid: &SlotGrid) -> Option<Response> {
     } else {
         Some(
             ApiError::unprocessable(
-                faults.iter().map(|f| f.to_string()).collect::<Vec<_>>().join("; "),
+                faults
+                    .iter()
+                    .map(|f| f.to_string())
+                    .collect::<Vec<_>>()
+                    .join("; "),
             )
             .into_response(),
         )
@@ -437,7 +468,11 @@ pub struct ApiError {
 
 impl ApiError {
     fn bad_request(message: impl Into<String>) -> Self {
-        Self { status: StatusCode::BAD_REQUEST, code: "bad_request", message: message.into() }
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            code: "bad_request",
+            message: message.into(),
+        }
     }
 
     fn unprocessable(message: impl Into<String>) -> Self {
@@ -449,13 +484,21 @@ impl ApiError {
     }
 
     fn not_found(message: impl Into<String>) -> Self {
-        Self { status: StatusCode::NOT_FOUND, code: "not_found", message: message.into() }
+        Self {
+            status: StatusCode::NOT_FOUND,
+            code: "not_found",
+            message: message.into(),
+        }
     }
 
     fn from_solve(e: tide_core::solver::ScheduleSolveError) -> Self {
         match e {
             tide_core::solver::ScheduleSolveError::Scenario(faults) => Self::unprocessable(
-                faults.iter().map(|f| f.to_string()).collect::<Vec<_>>().join("; "),
+                faults
+                    .iter()
+                    .map(|f| f.to_string())
+                    .collect::<Vec<_>>()
+                    .join("; "),
             ),
             tide_core::solver::ScheduleSolveError::PriceLength { got, expected } => {
                 Self::bad_request(format!("expected {expected} prices, got {got}"))
@@ -484,7 +527,8 @@ impl IntoResponse for ApiError {
         );
         response.headers_mut().insert(
             "x-tide-api-version",
-            HeaderValue::from_str(&API_VERSION.to_string()).unwrap_or(HeaderValue::from_static("1")),
+            HeaderValue::from_str(&API_VERSION.to_string())
+                .unwrap_or(HeaderValue::from_static("1")),
         );
         response
     }

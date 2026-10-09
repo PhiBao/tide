@@ -35,7 +35,10 @@ pub fn flat() -> Tariff {
         id: "flat".into(),
         name: "Flat rate".into(),
         zone: LocalZone::utc_named(),
-        periods: vec![RatePeriod::flat("base", crate::money::MicroUsdPerKwh(250_000))],
+        periods: vec![RatePeriod::flat(
+            "base",
+            crate::money::MicroUsdPerKwh(250_000),
+        )],
         fixed_charges: vec![],
         demand_charge: None,
         export_credit: None,

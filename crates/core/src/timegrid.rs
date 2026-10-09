@@ -25,14 +25,22 @@ pub struct SlotGrid {
 impl SlotGrid {
     #[must_use]
     pub const fn new(start_epoch_minutes: i64, slot_minutes: u16, slot_count: u32) -> Self {
-        Self { start_epoch_minutes, slot_minutes, slot_count }
+        Self {
+            start_epoch_minutes,
+            slot_minutes,
+            slot_count,
+        }
     }
 
     /// A grid starting now-ish, covering `hours` at the given slot length.
     #[must_use]
     pub fn covering(start_epoch_minutes: i64, slot_minutes: u16, hours: u16) -> Self {
         let slots = (u32::from(hours) * 60) / u32::from(slot_minutes);
-        Self { start_epoch_minutes, slot_minutes, slot_count: slots }
+        Self {
+            start_epoch_minutes,
+            slot_minutes,
+            slot_count: slots,
+        }
     }
 
     pub const SLOT_LENGTHS_ALLOWED: [u16; 6] = [5, 10, 15, 20, 30, 60];
@@ -50,10 +58,15 @@ impl SlotGrid {
             faults.push(GridFault::Empty);
         }
         if self.slot_count > MAX_SLOTS {
-            faults.push(GridFault::TooManySlots { found: self.slot_count, max: MAX_SLOTS });
+            faults.push(GridFault::TooManySlots {
+                found: self.slot_count,
+                max: MAX_SLOTS,
+            });
         }
         if !Self::SLOT_LENGTHS_ALLOWED.contains(&self.slot_minutes) {
-            faults.push(GridFault::SlotLengthDoesNotDivideHour { found: self.slot_minutes });
+            faults.push(GridFault::SlotLengthDoesNotDivideHour {
+                found: self.slot_minutes,
+            });
         }
         faults
     }
@@ -183,7 +196,10 @@ mod tests {
         assert_eq!(SlotGrid::new(0, 15, 0).validate(), vec![GridFault::Empty]);
         assert_eq!(
             SlotGrid::new(0, 15, MAX_SLOTS + 1).validate(),
-            vec![GridFault::TooManySlots { found: MAX_SLOTS + 1, max: MAX_SLOTS }]
+            vec![GridFault::TooManySlots {
+                found: MAX_SLOTS + 1,
+                max: MAX_SLOTS
+            }]
         );
     }
 
@@ -202,7 +218,11 @@ mod tests {
         let g = grid(24);
         assert_eq!(g.index_at(g.slot_start(0)), Some(0));
         assert_eq!(g.index_at(g.slot_start(42)), Some(42));
-        assert_eq!(g.index_at(g.slot_start(42) + 1), Some(42), "unaligned instant is contained");
+        assert_eq!(
+            g.index_at(g.slot_start(42) + 1),
+            Some(42),
+            "unaligned instant is contained"
+        );
         // Past the end of the grid. Computed arithmetically rather than with
         // `slot_start(96)`, which is itself out of range.
         assert_eq!(g.index_at(g.slot_start(0) + g.total_minutes()), None);

@@ -107,7 +107,10 @@ async fn health_reports_ok_and_a_version() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["status"], "ok");
     assert_eq!(body["service"], "tide");
-    assert!(body["api_version"].is_number(), "version must be a number so CI can pin it");
+    assert!(
+        body["api_version"].is_number(),
+        "version must be a number so CI can pin it"
+    );
 }
 
 #[tokio::test]
@@ -115,7 +118,10 @@ async fn tariffs_are_listed_with_their_source() {
     let (status, body) = get_json("/api/tariffs").await;
     assert_eq!(status, StatusCode::OK);
     let list = body["tariffs"].as_array().unwrap();
-    assert!(list.len() >= 3, "expected the bundled tariffs, got {list:?}");
+    assert!(
+        list.len() >= 3,
+        "expected the bundled tariffs, got {list:?}"
+    );
     for tariff in list {
         assert!(tariff["id"].is_string());
         assert!(
@@ -251,7 +257,10 @@ async fn verify_refuses_rather_than_inventing_an_optimum() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "got {body:?}");
-    assert_eq!(body["enumerated"], false, "must not claim to have enumerated");
+    assert_eq!(
+        body["enumerated"], false,
+        "must not claim to have enumerated"
+    );
     assert_eq!(body["optimal_cost_micro_usd"], json!(null));
     assert!(
         body["badge"].as_str().unwrap().contains("too large"),
@@ -300,7 +309,10 @@ async fn an_unusable_grid_is_a_422_not_a_panic() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(body["error"]["code"], "invalid_input");
-    assert!(body["error"]["message"].as_str().unwrap().contains("slot length"));
+    assert!(body["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("slot length"));
 }
 
 #[tokio::test]
@@ -319,7 +331,10 @@ async fn an_impossible_scenario_is_a_422_naming_the_load() {
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(body["error"]["code"], "invalid_input");
     let message = body["error"]["message"].as_str().unwrap();
-    assert!(message.contains("ev"), "the error must name the load: {message}");
+    assert!(
+        message.contains("ev"),
+        "the error must name the load: {message}"
+    );
 }
 
 #[tokio::test]
@@ -372,7 +387,10 @@ async fn horizon_starts_at_midnight_in_the_tariffs_own_zone() {
     assert_eq!(slots.len(), 96);
     let first_hour_cheap = slots[0]["mean_micro_usd_per_kwh"].as_u64().unwrap()
         < slots[40]["mean_micro_usd_per_kwh"].as_u64().unwrap();
-    assert!(first_hour_cheap, "the trough must lead the day, not trail it");
+    assert!(
+        first_hour_cheap,
+        "the trough must lead the day, not trail it"
+    );
 }
 
 #[tokio::test]

@@ -9,13 +9,13 @@
 //!    becomes a lie.
 //! 2. `solver_is_never_worse_than_baseline` — the whole point of the product.
 
-use tide_core::model::{Load, LoadId, Schedule, Scenario, ScenarioId};
+use tide_core::civil::days_from_civil;
+use tide_core::model::{Load, LoadId, Scenario, ScenarioId, Schedule};
+use tide_core::money::Wh;
 use tide_core::oracle::{solve_baseline, verify};
 use tide_core::rates::{Tariff, Usage};
 use tide_core::solver::{solve, Optimality};
-use tide_core::civil::days_from_civil;
 use tide_core::timegrid::SlotGrid;
-use tide_core::money::Wh;
 
 /// Epoch day of 2026-10-09, derived rather than hard-coded.
 fn day_2026_10_09() -> i64 {
@@ -35,7 +35,7 @@ fn load(id: &str, kwh: u64, kw: u32, deadline: u32) -> Load {
         deadline_slot: deadline,
         earliest_slot: 0,
         prefer_contiguous: false,
-            natural_start_slot: 0,
+        natural_start_slot: 0,
     }
 }
 
@@ -116,7 +116,11 @@ fn solver_prefers_the_cheap_window() {
     let prices = overnight_prices();
     let sc = scenario(vec![load("ev", 5, 2, 95)], 0);
     let sol = solve(&sc, &g, &prices).unwrap();
-    assert_eq!(sol.optimality, Optimality::Proved, "an uncoupled load must be provably optimal");
+    assert_eq!(
+        sol.optimality,
+        Optimality::Proved,
+        "an uncoupled load must be provably optimal"
+    );
     assert_eq!(sol.gap_percent_x1000, 0);
 
     // Every chosen slot must be in the cheap 00:00-07:00 window (slots 0..27).
@@ -157,10 +161,7 @@ fn solver_cost_and_bill_agree_exactly() {
         .iter()
         .map(|p| p.weighted_price)
         .collect();
-    let sc = scenario(
-        vec![load("ev", 12, 7, 95), load("dish", 1, 2, 90)],
-        7_000,
-    );
+    let sc = scenario(vec![load("ev", 12, 7, 95), load("dish", 1, 2, 90)], 7_000);
     let sol = solve(&sc, &g, &prices).unwrap();
     let usage = usage_from_schedule(&sol.schedule, &sc, &g);
     let bill = tide_core::rates::Bill::compute(&tariff, &g, &usage).unwrap();
@@ -194,13 +195,21 @@ fn solver_serves_every_load_fully() {
     let g = grid();
     let prices = overnight_prices();
     let sc = scenario(
-        vec![load("ev", 20, 7, 95), load("dish", 2, 2, 95), load("water", 3, 3, 95)],
+        vec![
+            load("ev", 20, 7, 95),
+            load("dish", 2, 2, 95),
+            load("water", 3, 3, 95),
+        ],
         7_000,
     );
     let sol = solve(&sc, &g, &prices).unwrap();
     for (i, p) in sol.schedule.placements.iter().enumerate() {
         assert!(!p.unmet, "load {} went unmet", sc.loads[i].id);
-        assert_eq!(p.delivered_wh, sc.loads[i].energy_wh, "load {} under-delivered", sc.loads[i].id);
+        assert_eq!(
+            p.delivered_wh, sc.loads[i].energy_wh,
+            "load {} under-delivered",
+            sc.loads[i].id
+        );
     }
 }
 
@@ -228,73 +237,82 @@ fn solver_respects_earliest_start() {
     }
 }
 
-    #[test]
-    fn solver_matches_the_oracle_on_many_small_instances() {
-        // The product's central claim: on every instance the oracle can
-        // exhaust, the solver's answer is exactly optimal. The corpus uses
-        // small grids and energies that are exact multiples of a slot's
-        // energy, so the oracle genuinely enumerates the whole space instead
-        // of bailing out and quietly proving nothing.
-        let g = SlotGrid::new(0, 15, 12);
-        let mut checked = 0;
-        for price_pattern in 0..6u64 {
-            let mut prices = vec![0u64; 12];
-            for (s, p) in prices.iter_mut().enumerate() {
-                *p = match price_pattern {
-                    0 => 100,
-                    1 => (s as u64 % 3) * 137,
-                    2 => 23 * s as u64,
-                    3 => if s < 6 { 50 } else { 400 },
-                    4 => ((s * 7) % 5) as u64 * 1000 + 1,
-                    _ => (s as u64 / 4) * 999,
-                };
-            }
-            for cap in [0u32, 2_000, 4_000] {
-                // 2000 W for a 15-minute slot is exactly 500 Wh, so these
-                // requirements divide into whole slots with no remainder.
-                let sc = Scenario {
-                    id: ScenarioId::new("s"),
-                    name: "t".into(),
-                    tariff_id: "t".into(),
-                    grid_start_epoch_minutes: 0,
-                    slot_minutes: 15,
-                    slots: 12,
-                    site_cap_w: cap,
-                    loads: vec![
-                        Load {
-                            id: LoadId::new("a"),
-                            label: "a".into(),
-                            energy_wh: Wh(1_000), // 2 slots at 500 Wh
-                            max_power_w: 2_000,
-                            deadline_slot: 11,
-                            earliest_slot: 0,
-                            prefer_contiguous: false,
-            natural_start_slot: 0,
-                        },
-                        Load {
-                            id: LoadId::new("b"),
-                            label: "b".into(),
-                            energy_wh: Wh(500), // 1 slot at 500 Wh
-                            max_power_w: 2_000,
-                            deadline_slot: 11,
-                            earliest_slot: 0,
-                            prefer_contiguous: false,
-            natural_start_slot: 0,
-                        },
-                    ],
-                };
-                let sol = solve(&sc, &g, &prices).unwrap();
-                let solver_numer = numer_of(&sol.schedule, &sc, &g, &prices);
-                let verdict = verify(&sc, &g, &prices, solver_numer, 50_000);
-                assert!(
-                    verdict.is_optimal,
-                    "solver was not optimal: pattern={price_pattern} cap={cap} verdict={verdict:?}"
-                );
-                checked += 1;
-            }
+#[test]
+fn solver_matches_the_oracle_on_many_small_instances() {
+    // The product's central claim: on every instance the oracle can
+    // exhaust, the solver's answer is exactly optimal. The corpus uses
+    // small grids and energies that are exact multiples of a slot's
+    // energy, so the oracle genuinely enumerates the whole space instead
+    // of bailing out and quietly proving nothing.
+    let g = SlotGrid::new(0, 15, 12);
+    let mut checked = 0;
+    for price_pattern in 0..6u64 {
+        let mut prices = vec![0u64; 12];
+        for (s, p) in prices.iter_mut().enumerate() {
+            *p = match price_pattern {
+                0 => 100,
+                1 => (s as u64 % 3) * 137,
+                2 => 23 * s as u64,
+                3 => {
+                    if s < 6 {
+                        50
+                    } else {
+                        400
+                    }
+                }
+                4 => ((s * 7) % 5) as u64 * 1000 + 1,
+                _ => (s as u64 / 4) * 999,
+            };
         }
-        assert!(checked >= 18, "expected a meaningful corpus, checked {checked}");
+        for cap in [0u32, 2_000, 4_000] {
+            // 2000 W for a 15-minute slot is exactly 500 Wh, so these
+            // requirements divide into whole slots with no remainder.
+            let sc = Scenario {
+                id: ScenarioId::new("s"),
+                name: "t".into(),
+                tariff_id: "t".into(),
+                grid_start_epoch_minutes: 0,
+                slot_minutes: 15,
+                slots: 12,
+                site_cap_w: cap,
+                loads: vec![
+                    Load {
+                        id: LoadId::new("a"),
+                        label: "a".into(),
+                        energy_wh: Wh(1_000), // 2 slots at 500 Wh
+                        max_power_w: 2_000,
+                        deadline_slot: 11,
+                        earliest_slot: 0,
+                        prefer_contiguous: false,
+                        natural_start_slot: 0,
+                    },
+                    Load {
+                        id: LoadId::new("b"),
+                        label: "b".into(),
+                        energy_wh: Wh(500), // 1 slot at 500 Wh
+                        max_power_w: 2_000,
+                        deadline_slot: 11,
+                        earliest_slot: 0,
+                        prefer_contiguous: false,
+                        natural_start_slot: 0,
+                    },
+                ],
+            };
+            let sol = solve(&sc, &g, &prices).unwrap();
+            let solver_numer = numer_of(&sol.schedule, &sc, &g, &prices);
+            let verdict = verify(&sc, &g, &prices, solver_numer, 50_000);
+            assert!(
+                verdict.is_optimal,
+                "solver was not optimal: pattern={price_pattern} cap={cap} verdict={verdict:?}"
+            );
+            checked += 1;
+        }
     }
+    assert!(
+        checked >= 18,
+        "expected a meaningful corpus, checked {checked}"
+    );
+}
 
 fn numer_of(schedule: &Schedule, _sc: &Scenario, g: &SlotGrid, prices: &[u64]) -> u128 {
     let mut numer = 0u128;
@@ -315,7 +333,10 @@ fn solver_rejects_invalid_scenarios_with_a_reason() {
     let err = solve(&sc, &g, &prices).unwrap_err();
     match err {
         tide_core::solver::ScheduleSolveError::Scenario(faults) => {
-            assert!(!faults.is_empty(), "must explain why the scenario is unusable");
+            assert!(
+                !faults.is_empty(),
+                "must explain why the scenario is unusable"
+            );
         }
         other => panic!("expected a scenario fault, got {other:?}"),
     }
@@ -326,12 +347,19 @@ fn solver_determinism_identical_input_identical_output() {
     let g = grid();
     let prices = overnight_prices();
     let sc = scenario(
-        vec![load("ev", 12, 7, 95), load("dish", 2, 2, 80), load("heat", 4, 3, 95)],
+        vec![
+            load("ev", 12, 7, 95),
+            load("dish", 2, 2, 80),
+            load("heat", 4, 3, 95),
+        ],
         7_000,
     );
     let a = solve(&sc, &g, &prices).unwrap();
     let b = solve(&sc, &g, &prices).unwrap();
-    assert_eq!(a, b, "solving the same scenario twice must give identical output");
+    assert_eq!(
+        a, b,
+        "solving the same scenario twice must give identical output"
+    );
     assert_eq!(
         serde_json::to_string(&a.schedule).unwrap(),
         serde_json::to_string(&b.schedule).unwrap()
@@ -346,7 +374,10 @@ fn gap_is_zero_when_proved() {
     let sol = solve(&sc, &g, &prices).unwrap();
     assert_eq!(sol.optimality, Optimality::Proved);
     assert_eq!(sol.gap_percent_x1000, 0);
-    assert!(sol.diagnostics.is_empty(), "a proved result needs no caveat");
+    assert!(
+        sol.diagnostics.is_empty(),
+        "a proved result needs no caveat"
+    );
     assert_eq!(sol.lower_bound_micro_usd, sol.schedule.cost_micro_usd);
 }
 
@@ -376,7 +407,10 @@ fn a_load_never_draws_twice_in_one_slot() {
         }
         // And the site draw must be a real per-slot sum of distinct loads.
         for &draw in &sol.schedule.site_draw_w {
-            assert!(draw <= 7_000, "a single load cannot exceed its own power: {draw}");
+            assert!(
+                draw <= 7_000,
+                "a single load cannot exceed its own power: {draw}"
+            );
         }
     }
 }
@@ -410,19 +444,17 @@ fn baseline_reflects_the_households_real_habit_not_the_earliest_slot() {
     let prices = overnight_prices();
     let sc = Scenario {
         site_cap_w: 7_000,
-        loads: vec![
-            Load {
-                id: LoadId::new("ev"),
-                label: "EV".into(),
-                energy_wh: Wh::from_kwh(12),
-                max_power_w: 7_000,
-                deadline_slot: 95,
-                earliest_slot: 0,
-                prefer_contiguous: false,
-                // Plugged in at 18:00 = slot 72, i.e. squarely on-peak.
-                natural_start_slot: 72,
-            },
-        ],
+        loads: vec![Load {
+            id: LoadId::new("ev"),
+            label: "EV".into(),
+            energy_wh: Wh::from_kwh(12),
+            max_power_w: 7_000,
+            deadline_slot: 95,
+            earliest_slot: 0,
+            prefer_contiguous: false,
+            // Plugged in at 18:00 = slot 72, i.e. squarely on-peak.
+            natural_start_slot: 72,
+        }],
         ..scenario(vec![], 0)
     };
     let sol = solve(&sc, &g, &prices).unwrap();

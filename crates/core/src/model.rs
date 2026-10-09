@@ -154,12 +154,17 @@ impl Scenario {
         let grid = self.grid();
         for load in &self.loads {
             if load.energy_wh.is_zero() || load.max_power_w == 0 {
-                faults.push(ScenarioFault::DegenerateLoad { load: load.id.clone() });
+                faults.push(ScenarioFault::DegenerateLoad {
+                    load: load.id.clone(),
+                });
             }
             if load.window_start(&grid) > load.window_end_inclusive(&grid) {
-                faults.push(ScenarioFault::EmptyWindow { load: load.id.clone() });
+                faults.push(ScenarioFault::EmptyWindow {
+                    load: load.id.clone(),
+                });
             }
-            if load.slots_needed(&grid) > load.window_end_inclusive(&grid) - load.window_start(&grid) + 1
+            if load.slots_needed(&grid)
+                > load.window_end_inclusive(&grid) - load.window_start(&grid) + 1
             {
                 faults.push(ScenarioFault::WindowTooShort {
                     load: load.id.clone(),
@@ -168,10 +173,14 @@ impl Scenario {
                 });
             }
             if self.site_cap_w > 0 && u64::from(load.max_power_w) > u64::from(self.site_cap_w) {
-                faults.push(ScenarioFault::ExceedsSiteCap { load: load.id.clone() });
+                faults.push(ScenarioFault::ExceedsSiteCap {
+                    load: load.id.clone(),
+                });
             }
             if load.natural_start_slot > grid.slot_count {
-                faults.push(ScenarioFault::NaturalStartOutOfRange { load: load.id.clone() });
+                faults.push(ScenarioFault::NaturalStartOutOfRange {
+                    load: load.id.clone(),
+                });
             }
         }
         faults
@@ -186,11 +195,23 @@ impl Scenario {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScenarioFault {
     Grid(crate::timegrid::GridFault),
-    DegenerateLoad { load: LoadId },
-    EmptyWindow { load: LoadId },
-    WindowTooShort { load: LoadId, needed: u32, available: u32 },
-    ExceedsSiteCap { load: LoadId },
-    NaturalStartOutOfRange { load: LoadId },
+    DegenerateLoad {
+        load: LoadId,
+    },
+    EmptyWindow {
+        load: LoadId,
+    },
+    WindowTooShort {
+        load: LoadId,
+        needed: u32,
+        available: u32,
+    },
+    ExceedsSiteCap {
+        load: LoadId,
+    },
+    NaturalStartOutOfRange {
+        load: LoadId,
+    },
 }
 
 impl core::fmt::Display for ScenarioFault {
@@ -289,8 +310,7 @@ impl Schedule {
                     continue;
                 }
                 let wh = u128::from(watts) * u128::from(grid.slot_minutes) / 60;
-                usage.import_wh[slot as usize] =
-                    Wh(usage.import_wh[slot as usize].0 + wh as u64);
+                usage.import_wh[slot as usize] = Wh(usage.import_wh[slot as usize].0 + wh as u64);
             }
         }
         usage
@@ -307,12 +327,7 @@ impl Schedule {
     /// verifier, so the two halves of the comparison share the same schedule
     /// representation and cannot drift apart.
     #[must_use]
-    pub fn baseline(
-        &self,
-        scenario: &Scenario,
-        grid: &SlotGrid,
-        weighted_prices: &[u64],
-    ) -> Self {
+    pub fn baseline(&self, scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u64]) -> Self {
         crate::oracle::solve_baseline(scenario, grid, weighted_prices)
     }
 }
@@ -364,7 +379,10 @@ impl Load {
     pub fn decompose(&self, grid: &SlotGrid) -> Decomposition {
         let per_slot = u128::from(self.max_power_w) * u128::from(grid.slot_minutes) / 60;
         if per_slot == 0 {
-            return Decomposition { full_slots: 0, partial_watts: 0 };
+            return Decomposition {
+                full_slots: 0,
+                partial_watts: 0,
+            };
         }
         let energy = u128::from(self.energy_wh.0);
         let full = (energy / per_slot) as u32;
@@ -376,7 +394,10 @@ impl Load {
             // length, and strictly less than `max_power_w`.
             (rem * 60 / u128::from(grid.slot_minutes)) as u32
         };
-        Decomposition { full_slots: full, partial_watts }
+        Decomposition {
+            full_slots: full,
+            partial_watts,
+        }
     }
 }
 
@@ -436,7 +457,11 @@ mod tests {
     fn window_is_clamped_to_the_grid() {
         let g = grid();
         let mut l = load("ev", 40, 7, 500);
-        assert_eq!(l.window_end_inclusive(&g), 95, "deadline past the end clamps to the last slot");
+        assert_eq!(
+            l.window_end_inclusive(&g),
+            95,
+            "deadline past the end clamps to the last slot"
+        );
         l.earliest_slot = 200;
         assert_eq!(l.window_start(&g), 96);
         assert!(l.window_start(&g) > l.window_end_inclusive(&g));
@@ -457,13 +482,24 @@ mod tests {
         };
         let faults = scenario.validate();
         assert!(
-            matches!(faults.as_slice(), [ScenarioFault::WindowTooShort { needed: 23, available: 5, .. }]),
+            matches!(
+                faults.as_slice(),
+                [ScenarioFault::WindowTooShort {
+                    needed: 23,
+                    available: 5,
+                    ..
+                }]
+            ),
             "got {faults:?}"
         );
 
         // And with a wide-enough window it validates.
         scenario.loads[0].deadline_slot = 40;
-        assert!(scenario.is_valid(), "should be valid once the window fits: {:?}", scenario.validate());
+        assert!(
+            scenario.is_valid(),
+            "should be valid once the window fits: {:?}",
+            scenario.validate()
+        );
     }
 
     #[test]
@@ -487,7 +523,11 @@ mod tests {
 
     #[test]
     fn canonical_order_is_by_id_so_output_is_reproducible() {
-        let mut loads = vec![load("c", 1, 1, 10), load("a", 1, 1, 10), load("b", 1, 1, 10)];
+        let mut loads = vec![
+            load("c", 1, 1, 10),
+            load("a", 1, 1, 10),
+            load("b", 1, 1, 10),
+        ];
         canonical_load_order(&mut loads);
         let ids: Vec<&str> = loads.iter().map(|l| l.id.0.as_str()).collect();
         assert_eq!(ids, ["a", "b", "c"]);

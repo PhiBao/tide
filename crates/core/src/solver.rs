@@ -51,10 +51,10 @@
 //! to the lower index, and there is no randomness. Identical input produces
 //! byte-identical output, which the determinism tests assert.
 
-use crate::model::{Load, Placement, Schedule, Scenario};
-use serde::{Deserialize, Serialize};
-use crate::timegrid::SlotGrid;
+use crate::model::{Load, Placement, Scenario, Schedule};
 use crate::money::{MicroUsd, Wh};
+use crate::timegrid::SlotGrid;
+use serde::{Deserialize, Serialize};
 
 /// How confident we are that the returned schedule is the cheapest possible.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -233,7 +233,11 @@ pub fn solve(
 
     Ok(ScheduleSolution {
         schedule: build_schedule(scenario, grid, &draws, cost_numer),
-        optimality: if proved { Optimality::Proved } else { Optimality::Heuristic },
+        optimality: if proved {
+            Optimality::Proved
+        } else {
+            Optimality::Heuristic
+        },
         lower_bound_micro_usd: numer_to_micro_usd(bound_numer, grid),
         gap_percent_x1000,
         diagnostics,
@@ -249,7 +253,14 @@ fn greedy_place(scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u64]) -
     let mut draws: Draws = vec![Vec::new(); scenario.loads.len()];
     // A site cap of 0 means "unlimited".
     let unlimited = scenario.site_cap_w == 0;
-    let mut remaining_cap = vec![if unlimited { u32::MAX } else { scenario.site_cap_w }; slots];
+    let mut remaining_cap = vec![
+        if unlimited {
+            u32::MAX
+        } else {
+            scenario.site_cap_w
+        };
+        slots
+    ];
 
     let mut order: Vec<usize> = (0..scenario.loads.len()).collect();
     order.sort_by(|&a, &b| {
@@ -260,7 +271,11 @@ fn greedy_place(scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u64]) -
 
     for &i in &order {
         let load = &scenario.loads[i];
-        let power = if unlimited { load.max_power_w } else { load.max_power_w.min(scenario.site_cap_w) };
+        let power = if unlimited {
+            load.max_power_w
+        } else {
+            load.max_power_w.min(scenario.site_cap_w)
+        };
         if power == 0 {
             continue;
         }
@@ -272,11 +287,10 @@ fn greedy_place(scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u64]) -
         let end = load.window_end_inclusive(grid) as usize;
 
         // Full-power slots first, cheapest available.
-        let mut candidates: Vec<usize> =
-            (start..=end).filter(|&s| remaining_cap[s] >= power).collect();
-        candidates.sort_by(|&a, &b| {
-            weighted_prices[a].cmp(&weighted_prices[b]).then(a.cmp(&b))
-        });
+        let mut candidates: Vec<usize> = (start..=end)
+            .filter(|&s| remaining_cap[s] >= power)
+            .collect();
+        candidates.sort_by(|&a, &b| weighted_prices[a].cmp(&weighted_prices[b]).then(a.cmp(&b)));
 
         let mut draw: Draw = Vec::with_capacity(decomp.total_slots() as usize);
         for &s in &candidates {
@@ -298,9 +312,7 @@ fn greedy_place(scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u64]) -
                     remaining_cap[s] >= decomp.partial_watts && !used.contains(&(s as u32))
                 })
                 .collect();
-            rest.sort_by(|&a, &b| {
-                weighted_prices[a].cmp(&weighted_prices[b]).then(a.cmp(&b))
-            });
+            rest.sort_by(|&a, &b| weighted_prices[a].cmp(&weighted_prices[b]).then(a.cmp(&b)));
             if let Some(&s) = rest.first() {
                 draw.push((s as u32, decomp.partial_watts));
                 remaining_cap[s] -= decomp.partial_watts;
@@ -407,8 +419,10 @@ fn build_schedule(
         let mut ordered = draws[i].clone();
         ordered.sort_by_key(|&(s, _)| s);
 
-        let delivered: u128 =
-            ordered.iter().map(|&(_, w)| energy_of(w, grid.slot_minutes)).sum();
+        let delivered: u128 = ordered
+            .iter()
+            .map(|&(_, w)| energy_of(w, grid.slot_minutes))
+            .sum();
         for &(s, w) in &ordered {
             if (s as usize) < slots {
                 site_draw[s as usize] += w;
@@ -417,8 +431,7 @@ fn build_schedule(
 
         let slots_only: Vec<u32> = ordered.iter().map(|&(s, _)| s).collect();
         let watts_only: Vec<u32> = ordered.iter().map(|&(_, w)| w).collect();
-        let contiguous = slots_only.len() <= 1
-            || slots_only.windows(2).all(|w| w[1] == w[0] + 1);
+        let contiguous = slots_only.len() <= 1 || slots_only.windows(2).all(|w| w[1] == w[0] + 1);
 
         out.push(Placement {
             load: load.id.clone(),

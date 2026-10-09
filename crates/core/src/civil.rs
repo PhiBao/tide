@@ -51,12 +51,28 @@ impl CivilDate {
     }
 
     pub const MONTH_NAMES: [&str; 12] = [
-        "January", "February", "March", "April", "May", "June", "July", "August", "September",
-        "October", "November", "December",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
     ];
 
     pub const WEEKDAY_NAMES: [&str; 7] = [
-        "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
     ];
 
     #[must_use]
@@ -171,7 +187,7 @@ pub const fn civil_from_days(days: i64) -> CivilDate {
     let mp = (5 * doy + 2) / 153; // [0, 11]
     let day = (doy - (153 * mp + 2) / 5 + 1) as u8; // [1, 31]
     let month = if mp < 10 { mp + 3 } else { mp - 9 } as u8; // [1, 12]
-    // The March-based year must be shifted forward for January and February.
+                                                             // The March-based year must be shifted forward for January and February.
     let march_shift: i64 = if month <= 2 { 1 } else { 0 };
     let year = (y + march_shift) as i32;
     CivilDate::new(year, month, day)
@@ -196,9 +212,9 @@ mod tests {
             (1970, 1, 1),
             (2000, 2, 29), // leap century
             (2024, 2, 29),
-            (2026, 3, 8),  // US DST start 2026
+            (2026, 3, 8),   // US DST start 2026
             (2026, 10, 25), // US DST end 2026
-            (1900, 3, 1),  // not a leap year (century, not /400)
+            (1900, 3, 1),   // not a leap year (century, not /400)
             (2100, 12, 31),
             (2026, 1, 1),
             (2026, 12, 31),

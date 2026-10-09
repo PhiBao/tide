@@ -37,7 +37,9 @@ use serde::{Deserialize, Serialize};
 /// beyond what we would risk overflowing when multiplying by energy.
 /// Newtype with a serialised string form, so JSON carries `"12.34"` for
 /// money and `"1800"` for watt-hours rather than a bare number.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 #[serde(transparent)]
 pub struct MicroUsd(pub i64);
 
@@ -141,7 +143,9 @@ impl core::ops::Sub for MicroUsd {
 /// energy, therefore no per-slot rounding, therefore no drift.
 /// Newtype with a serialised string form, so JSON carries `"12.34"` for
 /// money and `"1800"` for watt-hours rather than a bare number.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 #[serde(transparent)]
 pub struct Wh(pub u64);
 
@@ -202,7 +206,9 @@ impl fmt::Display for Wh {
 /// Electrical power in watts.
 /// Newtype with a serialised string form, so JSON carries `"12.34"` for
 /// money and `"1800"` for watt-hours rather than a bare number.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 #[serde(transparent)]
 pub struct Watts(pub u32);
 
@@ -249,7 +255,9 @@ impl Watts {
 /// Price in micro-dollars per kilowatt-hour.
 /// Newtype with a serialised string form, so JSON carries `"12.34"` for
 /// money and `"1800"` for watt-hours rather than a bare number.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 #[serde(transparent)]
 pub struct MicroUsdPerKwh(pub u32);
 
@@ -278,7 +286,9 @@ impl MicroUsdPerKwh {
 /// A count of settlement slots. `u32` covers a 15-minute grid over 7 years.
 /// Newtype with a serialised string form, so JSON carries `"12.34"` for
 /// money and `"1800"` for watt-hours rather than a bare number.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
 #[serde(transparent)]
 pub struct SlotSpan(pub u32);
 
@@ -399,7 +409,7 @@ mod tests {
     #[test]
     fn price_cost_rounds_deterministically_for_fractional_kwh() {
         let p = MicroUsdPerKwh(333_333); // $0.333333 / kWh
-        // 0.5 kWh * 0.333333 = 0.1666665 USD = 16666.65 cents -> 16667 cents
+                                         // 0.5 kWh * 0.333333 = 0.1666665 USD = 16666.65 cents -> 16667 cents
         let cost = p.cost_of(Wh(500));
         assert_eq!(cost, MicroUsd(166_667));
         // Order independence: cost of two halves equals cost of the whole
@@ -443,9 +453,21 @@ mod tests {
 
     #[test]
     fn cost_ordering_breaks_ties_deterministically() {
-        let a = CostTotal { micro_usd: MicroUsd(100), unmet: 0, tiebreak: 7 };
-        let b = CostTotal { micro_usd: MicroUsd(100), unmet: 0, tiebreak: 3 };
-        let c = CostTotal { micro_usd: MicroUsd(100), unmet: 1, tiebreak: 0 };
+        let a = CostTotal {
+            micro_usd: MicroUsd(100),
+            unmet: 0,
+            tiebreak: 7,
+        };
+        let b = CostTotal {
+            micro_usd: MicroUsd(100),
+            unmet: 0,
+            tiebreak: 3,
+        };
+        let c = CostTotal {
+            micro_usd: MicroUsd(100),
+            unmet: 1,
+            tiebreak: 0,
+        };
         assert!(b < a); // same cost, earlier tiebreak wins
         assert!(c > a); // same cost, more unmet loads loses
     }

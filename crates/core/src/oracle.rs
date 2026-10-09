@@ -30,15 +30,18 @@
 //! full slots plus one slot at 0.44 of full power — over-delivering would be a
 //! real billing error, so it is modelled rather than rounded away.
 
+use crate::model::{Scenario, Schedule};
 use crate::money::MicroUsd;
-use crate::model::{Schedule, Scenario};
 use crate::timegrid::SlotGrid;
 
 /// Outcome of running the oracle.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OracleOutcome {
     /// Enumeration completed. `optimal_numer` is the true optimum.
-    Exhaustive { optimal_numer: u128, nodes_explored: u64 },
+    Exhaustive {
+        optimal_numer: u128,
+        nodes_explored: u64,
+    },
     /// The instance was too large to enumerate within the budget. `nodes_explored`
     /// reports how far it got. No optimum is claimed.
     BudgetExceeded { nodes_explored: u64 },
@@ -109,7 +112,11 @@ pub fn verify(
     solver_numer: u128,
     node_budget: u64,
 ) -> OracleVerdict {
-    let mut search = Search { best: None, nodes: 0, budget: node_budget };
+    let mut search = Search {
+        best: None,
+        nodes: 0,
+        budget: node_budget,
+    };
     let mut site_used = vec![0u32; grid.slot_count as usize];
 
     enumerate(
@@ -123,7 +130,9 @@ pub fn verify(
     );
 
     let outcome = if search.exhausted_budget() {
-        OracleOutcome::BudgetExceeded { nodes_explored: search.nodes }
+        OracleOutcome::BudgetExceeded {
+            nodes_explored: search.nodes,
+        }
     } else {
         OracleOutcome::Exhaustive {
             optimal_numer: search.best.unwrap_or(0),
@@ -141,7 +150,13 @@ pub fn verify(
         None => 0,
     };
 
-    OracleVerdict { solver_numer, optimal_numer, is_optimal, excess_numer, outcome }
+    OracleVerdict {
+        solver_numer,
+        optimal_numer,
+        is_optimal,
+        excess_numer,
+        outcome,
+    }
 }
 
 /// Depth-first enumeration over loads, in index order.
@@ -185,7 +200,15 @@ fn enumerate(
     let total_units = decomp.full_slots as usize + usize::from(decomp.partial_watts > 0);
     if total_units == 0 {
         // A load with no requirement is satisfied by doing nothing.
-        enumerate(scenario, grid, prices, site_used, depth + 1, search, partial_numer);
+        enumerate(
+            scenario,
+            grid,
+            prices,
+            site_used,
+            depth + 1,
+            search,
+            partial_numer,
+        );
         return;
     }
     if total_units > window.len() {
@@ -321,11 +344,7 @@ fn numer_to_micro_usd(numerator: u128, grid: &SlotGrid) -> MicroUsd {
 /// The honest counterfactual — what a household's current habits cost. It
 /// respects the same site cap, deadlines and windows as the optimiser; it
 /// simply prefers earlier slots over cheaper ones.
-pub fn solve_baseline(
-    scenario: &Scenario,
-    grid: &SlotGrid,
-    weighted_prices: &[u64],
-) -> Schedule {
+pub fn solve_baseline(scenario: &Scenario, grid: &SlotGrid, weighted_prices: &[u64]) -> Schedule {
     let slots = grid.slot_count as usize;
     let mut site_used = vec![0u32; slots];
     let mut placements = Vec::with_capacity(scenario.loads.len());
@@ -334,7 +353,9 @@ pub fn solve_baseline(
         // The counterfactual: where the household would *actually* put this
         // load if nobody optimised it. Not the earliest slot, which would land
         // in the cheap overnight trough and show a saving of zero.
-        let natural = load.natural_start_slot.min(grid.slot_count.saturating_sub(1)) as usize;
+        let natural = load
+            .natural_start_slot
+            .min(grid.slot_count.saturating_sub(1)) as usize;
         let start = natural.max(load.window_start(grid) as usize);
         let end = load.window_end_inclusive(grid) as usize;
         let decomp = load.decompose(grid);
@@ -348,7 +369,11 @@ pub fn solve_baseline(
             }
             let want_partial =
                 decomp.partial_watts > 0 && !partial_taken && chosen.len() + 1 == total_units;
-            let w = if want_partial { decomp.partial_watts } else { load.max_power_w };
+            let w = if want_partial {
+                decomp.partial_watts
+            } else {
+                load.max_power_w
+            };
             if scenario.site_cap_w > 0
                 && u64::from(site_used[s]) + u64::from(w) > u64::from(scenario.site_cap_w)
             {
@@ -377,7 +402,11 @@ pub fn solve_baseline(
                 if is_partial {
                     partial_used = true;
                 }
-                let w = if is_partial { decomp.partial_watts } else { load.max_power_w };
+                let w = if is_partial {
+                    decomp.partial_watts
+                } else {
+                    load.max_power_w
+                };
                 let energy = u128::from(w) * u128::from(grid.slot_minutes) / 60;
                 numer += energy * u128::from(weighted_prices[s as usize]);
             }
@@ -410,12 +439,15 @@ pub fn assemble(
         let mut delivered: u128 = 0;
         let mut partial_used = false;
         for (pos, &s) in chosen.iter().enumerate() {
-            let is_partial =
-                decomp.partial_watts > 0 && pos + 1 == chosen.len() && !partial_used;
+            let is_partial = decomp.partial_watts > 0 && pos + 1 == chosen.len() && !partial_used;
             if is_partial {
                 partial_used = true;
             }
-            let w = if is_partial { decomp.partial_watts } else { load.max_power_w };
+            let w = if is_partial {
+                decomp.partial_watts
+            } else {
+                load.max_power_w
+            };
             delivered += u128::from(w) * u128::from(grid.slot_minutes) / 60;
             site_draw[s as usize] += w;
         }
@@ -492,13 +524,20 @@ mod tests {
         let d = load("ev", 40, 7, 90, 0).decompose(&g);
         assert_eq!(d.full_slots, 22);
         assert_eq!(d.partial_watts, 6000);
-        assert_eq!(22 * 1750 + 6000 * 15 / 60, 40_000, "must total exactly 40 kWh");
+        assert_eq!(
+            22 * 1750 + 6000 * 15 / 60,
+            40_000,
+            "must total exactly 40 kWh"
+        );
 
         // An exact multiple must produce no partial slot at all.
         // 35 kWh / 1.75 kWh per slot = exactly 20 full slots.
         let d = load("exact", 35, 7, 90, 0).decompose(&g);
         assert_eq!(d.full_slots, 20);
-        assert_eq!(d.partial_watts, 0, "an exact multiple must not over-deliver");
+        assert_eq!(
+            d.partial_watts, 0,
+            "an exact multiple must not over-deliver"
+        );
         assert_eq!(d.total_slots(), 20);
     }
 
@@ -512,7 +551,7 @@ mod tests {
         }
         let sc = scenario(
             vec![
-                load("a", 1, 2, 11, 0),  // 1 kWh at 2 kW = 0.5 kWh/slot -> 2 slots
+                load("a", 1, 2, 11, 0), // 1 kWh at 2 kW = 0.5 kWh/slot -> 2 slots
                 load("b", 1, 2, 11, 0),
             ],
             0,
@@ -560,8 +599,15 @@ mod tests {
         let schedule = solve_baseline(&sc, &g, &prices);
         assert_eq!(schedule.placements.len(), 1);
         let slots = &schedule.placements[0].slots;
-        assert_eq!(slots, &vec![0, 1, 2, 3], "baseline must fill from the earliest slot");
-        assert!(!schedule.placements[0].unmet, "the load must be fully served");
+        assert_eq!(
+            slots,
+            &vec![0, 1, 2, 3],
+            "baseline must fill from the earliest slot"
+        );
+        assert!(
+            !schedule.placements[0].unmet,
+            "the load must be fully served"
+        );
         assert_eq!(
             schedule.placements[0].delivered_wh.0, 2_000,
             "delivery must match the requirement exactly"
@@ -591,7 +637,10 @@ mod tests {
             optimal_numer: Some(1_000),
             is_optimal: true,
             excess_numer: 0,
-            outcome: OracleOutcome::Exhaustive { optimal_numer: 1_000, nodes_explored: 10 },
+            outcome: OracleOutcome::Exhaustive {
+                optimal_numer: 1_000,
+                nodes_explored: 10,
+            },
         };
         assert_eq!(exact.badge(), "verified: exact optimum");
 
@@ -600,7 +649,10 @@ mod tests {
             optimal_numer: Some(1_000),
             is_optimal: false,
             excess_numer: 100,
-            outcome: OracleOutcome::Exhaustive { optimal_numer: 1_000, nodes_explored: 10 },
+            outcome: OracleOutcome::Exhaustive {
+                optimal_numer: 1_000,
+                nodes_explored: 10,
+            },
         };
         assert_eq!(gapped.badge(), "verified: 10.000% above exact optimum");
 
@@ -614,4 +666,3 @@ mod tests {
         assert_eq!(refused.badge(), "proof: not attempted (instance too large)");
     }
 }
-

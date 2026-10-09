@@ -60,7 +60,11 @@ impl Transition {
     /// The date this transition falls on in `year`.
     #[must_use]
     pub fn date_in(&self, year: i32) -> CivilDate {
-        CivilDate::new(year, self.month, self.week.day_of(year, self.month, self.weekday))
+        CivilDate::new(
+            year,
+            self.month,
+            self.week.day_of(year, self.month, self.weekday),
+        )
     }
 }
 
@@ -136,7 +140,11 @@ impl LocalZone {
     /// UTC with a real name, for tariffs that want to display one.
     #[must_use]
     pub fn utc_named() -> Self {
-        Self { name: "UTC".into(), standard_offset_minutes: 0, dst: None }
+        Self {
+            name: "UTC".into(),
+            standard_offset_minutes: 0,
+            dst: None,
+        }
     }
 
     /// US Eastern.
@@ -146,8 +154,18 @@ impl LocalZone {
             name: "America/New_York".into(),
             standard_offset_minutes: -300,
             dst: Some(DstRule {
-                start: Transition { month: 3, week: WeekOfMonth::Second, weekday: 0, time_of_day_minutes: 2 * 60 },
-                end: Transition { month: 11, week: WeekOfMonth::First, weekday: 0, time_of_day_minutes: 2 * 60 },
+                start: Transition {
+                    month: 3,
+                    week: WeekOfMonth::Second,
+                    weekday: 0,
+                    time_of_day_minutes: 2 * 60,
+                },
+                end: Transition {
+                    month: 11,
+                    week: WeekOfMonth::First,
+                    weekday: 0,
+                    time_of_day_minutes: 2 * 60,
+                },
                 extra_offset_minutes: 60,
                 start_convention: TransitionConvention::LocalStandard,
                 end_convention: TransitionConvention::LocalDaylight,
@@ -162,8 +180,18 @@ impl LocalZone {
             name: "America/Los_Angeles".into(),
             standard_offset_minutes: -480,
             dst: Some(DstRule {
-                start: Transition { month: 3, week: WeekOfMonth::Second, weekday: 0, time_of_day_minutes: 2 * 60 },
-                end: Transition { month: 11, week: WeekOfMonth::First, weekday: 0, time_of_day_minutes: 2 * 60 },
+                start: Transition {
+                    month: 3,
+                    week: WeekOfMonth::Second,
+                    weekday: 0,
+                    time_of_day_minutes: 2 * 60,
+                },
+                end: Transition {
+                    month: 11,
+                    week: WeekOfMonth::First,
+                    weekday: 0,
+                    time_of_day_minutes: 2 * 60,
+                },
                 extra_offset_minutes: 60,
                 start_convention: TransitionConvention::LocalStandard,
                 end_convention: TransitionConvention::LocalDaylight,
@@ -178,8 +206,18 @@ impl LocalZone {
             name: "Europe/Berlin".into(),
             standard_offset_minutes: 60,
             dst: Some(DstRule {
-                start: Transition { month: 3, week: WeekOfMonth::Last, weekday: 0, time_of_day_minutes: 1 * 60 },
-                end: Transition { month: 10, week: WeekOfMonth::Last, weekday: 0, time_of_day_minutes: 1 * 60 },
+                start: Transition {
+                    month: 3,
+                    week: WeekOfMonth::Last,
+                    weekday: 0,
+                    time_of_day_minutes: 1 * 60,
+                },
+                end: Transition {
+                    month: 10,
+                    week: WeekOfMonth::Last,
+                    weekday: 0,
+                    time_of_day_minutes: 1 * 60,
+                },
                 extra_offset_minutes: 60,
                 start_convention: TransitionConvention::Utc,
                 end_convention: TransitionConvention::Utc,
@@ -196,7 +234,8 @@ impl LocalZone {
         // Local year, found by converting at the standard offset first. For any
         // zone whose DST window does not straddle New Year (all of them), this
         // is exact.
-        let standard_local_days = (epoch_minutes + i64::from(self.standard_offset_minutes)).div_euclid(1_440);
+        let standard_local_days =
+            (epoch_minutes + i64::from(self.standard_offset_minutes)).div_euclid(1_440);
         let year = CivilDate::from_days(standard_local_days).year;
 
         let start = rule.start_epoch(year, self.standard_offset_minutes);
@@ -254,9 +293,7 @@ impl LocalZone {
         // Ambiguous (two instants map to this wall clock) -> pick the earlier.
         let earlier = base
             - i64::from(self.standard_offset_minutes)
-            - self
-                .dst
-                .map_or(0, |r| i64::from(r.extra_offset_minutes));
+            - self.dst.map_or(0, |r| i64::from(r.extra_offset_minutes));
         if self.to_local(earlier).minutes_of_day == minutes_of_day
             && self.to_local(earlier).date == date
         {
@@ -278,14 +315,22 @@ pub struct LocalWallClock {
 impl LocalWallClock {
     #[must_use]
     pub fn hhmm(&self) -> String {
-        format!("{:02}:{:02}", self.minutes_of_day / 60, self.minutes_of_day % 60)
+        format!(
+            "{:02}:{:02}",
+            self.minutes_of_day / 60,
+            self.minutes_of_day % 60
+        )
     }
 }
 
 /// `String::new()` is not `const`, so provide an explicit constructor.
 impl LocalZone {
     pub const fn utc() -> Self {
-        Self { name: String::new(), standard_offset_minutes: 0, dst: None }
+        Self {
+            name: String::new(),
+            standard_offset_minutes: 0,
+            dst: None,
+        }
     }
 }
 
@@ -313,7 +358,10 @@ mod tests {
         let before_end = epoch(2026, 11, 1, 1, 59, -240);
         let after_end = epoch(2026, 11, 1, 1, 0, -300);
         assert!(z.is_dst(before_end));
-        assert!(!z.is_dst(after_end), "01:00 standard after fall-back is EST");
+        assert!(
+            !z.is_dst(after_end),
+            "01:00 standard after fall-back is EST"
+        );
         assert_eq!(z.offset_at(after_end), -300);
     }
 
@@ -347,7 +395,10 @@ mod tests {
         assert_eq!(z.to_local(t2).hhmm(), "03:00", "02:xx local does not exist");
         for m in 0..60 {
             let reading = z.to_local(t2 - 60 + m).hhmm();
-            assert!(!reading.starts_with("02:"), "02:{m:02} should not exist, got {reading}");
+            assert!(
+                !reading.starts_with("02:"),
+                "02:{m:02} should not exist, got {reading}"
+            );
         }
     }
 
@@ -368,7 +419,9 @@ mod tests {
     fn from_local_reports_the_gap_as_nonexistent() {
         let z = LocalZone::us_eastern();
         // 02:30 local on 2026-03-08 does not exist.
-        assert!(z.from_local(CivilDate::new(2026, 3, 8), 2 * 60 + 30).is_none());
+        assert!(z
+            .from_local(CivilDate::new(2026, 3, 8), 2 * 60 + 30)
+            .is_none());
         // A normal time resolves fine.
         assert!(z.from_local(CivilDate::new(2026, 6, 1), 12 * 60).is_some());
     }

@@ -229,7 +229,11 @@ impl Tariff {
                 }
                 match gaps.last_mut() {
                     Some(g) if g.date == date && g.to + 1 == minute => g.to = minute,
-                    _ => gaps.push(CoverageGap { date, from: minute, to: minute }),
+                    _ => gaps.push(CoverageGap {
+                        date,
+                        from: minute,
+                        to: minute,
+                    }),
                 }
             }
         }
@@ -290,19 +294,28 @@ impl Tariff {
                 let idx = self.period_at(clock.date, clock.minutes_of_day);
                 match attribution.last_mut() {
                     Some(last) if last.period_index == idx => last.minutes += 1,
-                    _ => attribution.push(PeriodAttribution { period_index: idx, minutes: 1 }),
+                    _ => attribution.push(PeriodAttribution {
+                        period_index: idx,
+                        minutes: 1,
+                    }),
                 }
             }
 
             let weighted_price: u64 = attribution
                 .iter()
                 .map(|a| {
-                    let price = a.period_index.map_or(0, |i| u64::from(self.periods[i].price.0));
+                    let price = a
+                        .period_index
+                        .map_or(0, |i| u64::from(self.periods[i].price.0));
                     price * u64::from(a.minutes)
                 })
                 .sum();
 
-            out.push(SlotPrice { weighted_price, slot_minutes: grid.slot_minutes, attribution });
+            out.push(SlotPrice {
+                weighted_price,
+                slot_minutes: grid.slot_minutes,
+                attribution,
+            });
         }
         out
     }
@@ -358,7 +371,10 @@ pub struct Usage {
 
 impl Usage {
     pub fn new(slots: usize) -> Self {
-        Self { import_wh: vec![Wh::ZERO; slots], export_wh: vec![Wh::ZERO; slots] }
+        Self {
+            import_wh: vec![Wh::ZERO; slots],
+            export_wh: vec![Wh::ZERO; slots],
+        }
     }
 
     pub fn validate_len(&self, slots: usize) -> Result<(), UsageFault> {
@@ -375,7 +391,11 @@ impl Usage {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UsageFault {
-    LengthMismatch { import: usize, export: usize, expected: usize },
+    LengthMismatch {
+        import: usize,
+        export: usize,
+        expected: usize,
+    },
 }
 
 /// One line of a bill: what it is, how much, and why.
@@ -419,7 +439,9 @@ impl Bill {
     /// the line's `detail` so the arithmetic is inspectable.
     #[must_use]
     pub fn compute(tariff: &Tariff, grid: &SlotGrid, usage: &Usage) -> Result<Self, BillFault> {
-        usage.validate_len(grid.slot_count as usize).map_err(BillFault::Usage)?;
+        usage
+            .validate_len(grid.slot_count as usize)
+            .map_err(BillFault::Usage)?;
         let prices = tariff.price_series(grid);
 
         let n = tariff.periods.len();
@@ -464,7 +486,9 @@ impl Bill {
                     if share == 0 {
                         continue;
                     }
-                    let Some(idx) = attr.period_index else { continue };
+                    let Some(idx) = attr.period_index else {
+                        continue;
+                    };
                     let p = u128::from(tariff.periods[idx].price.0);
                     numer[idx] += p * share;
                     energy[idx] += share as u64;
@@ -504,7 +528,10 @@ impl Bill {
                     energy_wh: Wh(export_wh),
                     rate: None,
                     amount: amount.saturating_neg(),
-                    detail: format!("{export_wh} Wh exported at {} micro-USD/kWh", credit.rate_per_kwh.0),
+                    detail: format!(
+                        "{export_wh} Wh exported at {} micro-USD/kWh",
+                        credit.rate_per_kwh.0
+                    ),
                 });
             }
         }
@@ -567,11 +594,18 @@ impl Bill {
         // lines always sum to the printed total. "The lines don't add up" is
         // the most common utility-billing complaint and is entirely avoidable.
         let line_cents = allocate_cents(
-            &lines.iter().map(|l| i128::from(l.amount.0)).collect::<Vec<_>>(),
+            &lines
+                .iter()
+                .map(|l| i128::from(l.amount.0))
+                .collect::<Vec<_>>(),
             total_cents,
         );
 
-        Ok(Bill { lines, total: MicroUsd(i128_to_i64(total_micro)), line_cents })
+        Ok(Bill {
+            lines,
+            total: MicroUsd(i128_to_i64(total_micro)),
+            line_cents,
+        })
     }
 }
 
@@ -729,8 +763,22 @@ mod tests {
             name: "TOU".into(),
             zone: LocalZone::utc(),
             periods: vec![
-                RatePeriod::window("off", "Off-peak", DaySelector::EveryDay, 1_200, 480, MicroUsdPerKwh(100_000)),
-                RatePeriod::window("on", "On-peak", DaySelector::EveryDay, 480, 1_200, MicroUsdPerKwh(500_000)),
+                RatePeriod::window(
+                    "off",
+                    "Off-peak",
+                    DaySelector::EveryDay,
+                    1_200,
+                    480,
+                    MicroUsdPerKwh(100_000),
+                ),
+                RatePeriod::window(
+                    "on",
+                    "On-peak",
+                    DaySelector::EveryDay,
+                    480,
+                    1_200,
+                    MicroUsdPerKwh(500_000),
+                ),
             ],
             fixed_charges: vec![],
             demand_charge: None,
@@ -760,8 +808,22 @@ mod tests {
             name: "TOU".into(),
             zone: LocalZone::utc(),
             periods: vec![
-                RatePeriod::window("off", "Off-peak", DaySelector::EveryDay, 1_260, 487, MicroUsdPerKwh(500_000)),
-                RatePeriod::window("on", "On-peak", DaySelector::EveryDay, 487, 1_260, MicroUsdPerKwh(100_000)),
+                RatePeriod::window(
+                    "off",
+                    "Off-peak",
+                    DaySelector::EveryDay,
+                    1_260,
+                    487,
+                    MicroUsdPerKwh(500_000),
+                ),
+                RatePeriod::window(
+                    "on",
+                    "On-peak",
+                    DaySelector::EveryDay,
+                    487,
+                    1_260,
+                    MicroUsdPerKwh(100_000),
+                ),
             ],
             fixed_charges: vec![],
             demand_charge: None,
@@ -809,8 +871,22 @@ mod tests {
             name: "Night".into(),
             zone: LocalZone::utc(),
             periods: vec![
-                RatePeriod::window("night", "Overnight", DaySelector::EveryDay, 1_260, 420, MicroUsdPerKwh(200_000)),
-                RatePeriod::window("day", "Daytime", DaySelector::EveryDay, 420, 1_260, MicroUsdPerKwh(400_000)),
+                RatePeriod::window(
+                    "night",
+                    "Overnight",
+                    DaySelector::EveryDay,
+                    1_260,
+                    420,
+                    MicroUsdPerKwh(200_000),
+                ),
+                RatePeriod::window(
+                    "day",
+                    "Daytime",
+                    DaySelector::EveryDay,
+                    420,
+                    1_260,
+                    MicroUsdPerKwh(400_000),
+                ),
             ],
             fixed_charges: vec![],
             demand_charge: None,
@@ -818,7 +894,10 @@ mod tests {
             source_url: None,
             source_retrieved: None,
         };
-        assert!(tariff.coverage_gaps().is_empty(), "a midnight-crossing window must still cover the week");
+        assert!(
+            tariff.coverage_gaps().is_empty(),
+            "a midnight-crossing window must still cover the week"
+        );
         let g = grid();
         let mut early = Usage::new(96);
         early.import_wh[0] = Wh::from_kwh(1); // 00:00 is inside 21:00-07:00
@@ -869,7 +948,10 @@ mod tests {
     #[test]
     fn export_is_a_credit_not_a_charge() {
         let tariff = Tariff {
-            export_credit: Some(ExportCredit { label: "Net metering".into(), rate_per_kwh: MicroUsd(300_000) }),
+            export_credit: Some(ExportCredit {
+                label: "Net metering".into(),
+                rate_per_kwh: MicroUsd(300_000),
+            }),
             ..flat_tariff()
         };
         let g = grid();
@@ -877,19 +959,30 @@ mod tests {
         usage.export_wh[0] = Wh::from_kwh(4); // 4 kWh at $0.30/kWh = $1.20 credit
         let bill = Bill::compute(&tariff, &g, &usage).unwrap();
         assert_eq!(bill.total, MicroUsd::from_cents(-120));
-        assert!(bill.lines.iter().any(|l| l.label.starts_with("Export credit")));
+        assert!(bill
+            .lines
+            .iter()
+            .any(|l| l.label.starts_with("Export credit")));
     }
 
     #[test]
     fn fixed_charges_are_prorated_and_labelled() {
         let tariff = Tariff {
-            fixed_charges: vec![FixedCharge { label: "Customer".into(), amount: MicroUsd::from_cents(3_000), per_days: 30 }],
+            fixed_charges: vec![FixedCharge {
+                label: "Customer".into(),
+                amount: MicroUsd::from_cents(3_000),
+                per_days: 30,
+            }],
             ..flat_tariff()
         };
         let g = grid();
         let usage = Usage::new(96);
         let bill = Bill::compute(&tariff, &g, &usage).unwrap();
-        let fixed = bill.lines.iter().find(|l| l.label.starts_with("Fixed charge")).unwrap();
+        let fixed = bill
+            .lines
+            .iter()
+            .find(|l| l.label.starts_with("Fixed charge"))
+            .unwrap();
         // $30.00/month over a 1-day window = $1.00
         assert_eq!(fixed.amount, MicroUsd::from_cents(100));
         assert!(fixed.detail.contains("prorated over 1 day"));
@@ -924,7 +1017,11 @@ mod tests {
         let err = Bill::compute(&tariff, &grid(), &usage).unwrap_err();
         assert_eq!(
             err,
-            BillFault::Usage(UsageFault::LengthMismatch { import: 10, export: 10, expected: 96 })
+            BillFault::Usage(UsageFault::LengthMismatch {
+                import: 10,
+                export: 10,
+                expected: 96
+            })
         );
     }
 
@@ -954,17 +1051,40 @@ mod tests {
     fn period_boundaries_are_half_open() {
         let tariff = tou_tariff();
         // 08:00 exactly starts on-peak; 07:59 is still off-peak.
-        assert_eq!(tariff.period_at(CivilDate::new(2026, 10, 9), 480).unwrap(), 1);
-        assert_eq!(tariff.period_at(CivilDate::new(2026, 10, 9), 479).unwrap(), 0);
+        assert_eq!(
+            tariff.period_at(CivilDate::new(2026, 10, 9), 480).unwrap(),
+            1
+        );
+        assert_eq!(
+            tariff.period_at(CivilDate::new(2026, 10, 9), 479).unwrap(),
+            0
+        );
         // 20:00 exactly ends on-peak.
-        assert_eq!(tariff.period_at(CivilDate::new(2026, 10, 9), 1_200).unwrap(), 0);
-        assert_eq!(tariff.period_at(CivilDate::new(2026, 10, 9), 1_199).unwrap(), 1);
+        assert_eq!(
+            tariff
+                .period_at(CivilDate::new(2026, 10, 9), 1_200)
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            tariff
+                .period_at(CivilDate::new(2026, 10, 9), 1_199)
+                .unwrap(),
+            1
+        );
     }
 
     #[test]
     fn weekend_selector_separates_weekdays_from_weekends() {
         // 2026-10-10 is a Saturday, 2026-10-09 is a Friday.
-        let period = RatePeriod::window("wk", "Weekdays", DaySelector::Weekdays, 480, 1_200, MicroUsdPerKwh(1));
+        let period = RatePeriod::window(
+            "wk",
+            "Weekdays",
+            DaySelector::Weekdays,
+            480,
+            1_200,
+            MicroUsdPerKwh(1),
+        );
         assert!(period.applies_at(CivilDate::new(2026, 10, 9), 600));
         assert!(!period.applies_at(CivilDate::new(2026, 10, 10), 600));
     }
