@@ -449,3 +449,58 @@ async fn baseline_runs_loads_where_the_household_actually_would() {
         "planning must be cheaper than the household's real habit"
     );
 }
+
+#[tokio::test]
+async fn malformed_json_uses_the_same_error_envelope_as_every_other_failure() {
+    // Axum's default is plain text (`Failed to deserialize the JSON body ...`),
+    // which breaks the contract every other error follows. A client should never
+    // have to parse prose to learn what went wrong.
+    // Axum distinguishes the two: a body that is not JSON at all is a 400,
+    // while valid JSON that does not match the schema is a 422. Both go through
+    // the same envelope, which is what is being asserted here.
+    for (bad, expected) in [
+        ("{not json", StatusCode::BAD_REQUEST),
+        ("[]", StatusCode::UNPROCESSABLE_ENTITY),
+        ("null", StatusCode::UNPROCESSABLE_ENTITY),
+        ("", StatusCode::BAD_REQUEST),
+    ] {
+        let response = app()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/solve")
+                    .header("content-type", "application/json")
+                    .body(Body::from(bad.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), expected, "body {bad:?}");
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let value: Value = serde_json::from_slice(&bytes)
+            .unwrap_or_else(|e| panic!("body {bad:?} did not return JSON: {e}"));
+        assert!(
+            value["error"]["code"].is_string(),
+            "body {bad:?} must carry a stable code: {value}"
+        );
+        assert!(
+            value["error"]["message"].is_string(),
+            "body {bad:?} must carry a human message: {value}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_missing_field_names_the_field_rather_than_guessing() {
+    let (status, body) = post_json(
+        "/api/solve",
+        json!({ "tariff_id": "flat", "scenario": { "name": "no id" } }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    let message = body["error"]["message"].as_str().unwrap();
+    assert!(
+        message.contains("id"),
+        "the error should name the missing field: {message}"
+    );
+}

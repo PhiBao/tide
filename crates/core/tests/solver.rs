@@ -477,3 +477,36 @@ fn baseline_reflects_the_households_real_habit_not_the_earliest_slot() {
         sol.schedule.cost_micro_usd
     );
 }
+
+#[test]
+fn solve_stays_inside_the_workers_cpu_budget() {
+    // The README claims a 96-slot, three-load scenario solves in under 2 ms,
+    // because Cloudflare's free tier allows 10 ms of CPU per request. A claim
+    // like that is exactly the kind this product exists to prove, so it is
+    // asserted rather than asserted-in-prose.
+    let g = grid();
+    let prices = overnight_prices();
+    let sc = scenario(
+        vec![
+            load("ev", 12, 7, 95),
+            load("dish", 2, 2, 80),
+            load("heat", 3, 3, 95),
+        ],
+        7_000,
+    );
+
+    // Warm up, then take the best of several runs so a single scheduling
+    // hiccup on the test machine cannot fail an otherwise sound bound.
+    let mut best = std::time::Duration::from_secs(60);
+    for _ in 0..200 {
+        let started = std::time::Instant::now();
+        let solution = solve(&sc, &g, &prices).unwrap();
+        let elapsed = started.elapsed();
+        best = best.min(elapsed);
+        assert_eq!(solution.optimality, Optimality::Proved);
+    }
+    assert!(
+        best < std::time::Duration::from_millis(2),
+        "solving took {best:?}, which is not comfortably inside the 10 ms budget"
+    );
+}

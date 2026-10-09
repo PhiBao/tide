@@ -24,7 +24,7 @@
 //! bad request from a bad day without parsing prose.
 
 use axum::{
-    extract::{Json, Path, State},
+    extract::{FromRequest, Json, Path, State},
     http::{header, HeaderValue, Method, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -139,7 +139,11 @@ async fn get_tariff(State(state): State<AppState>, Path(id): Path<String>) -> Re
     }
 }
 
-async fn prices(State(state): State<AppState>, Json(req): Json<PriceRequest>) -> Response {
+async fn prices(request: axum::extract::Request) -> Response {
+    let (req, state) = match body::<PriceRequest>(request).await {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
     match resolve_grid(&req.grid) {
         Ok(grid) => {
             let Some(tariff) = state.tariff(&req.tariff_id) else {
@@ -164,7 +168,11 @@ async fn prices(State(state): State<AppState>, Json(req): Json<PriceRequest>) ->
 /// it is showing. Deciding the horizon on the server keeps every timezone rule
 /// in one place — the same rule the rate engine already relies on — so the
 /// client never has to know one.
-async fn horizon(State(state): State<AppState>, Json(req): Json<HorizonRequest>) -> Response {
+async fn horizon(request: axum::extract::Request) -> Response {
+    let (req, state) = match body::<HorizonRequest>(request).await {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
     let Some(tariff) = state.tariff(&req.tariff_id) else {
         return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id))
             .into_response();
@@ -202,7 +210,11 @@ fn price_response(tariff: &Tariff, grid: &SlotGrid) -> PriceResponse {
     }
 }
 
-async fn solve_scenario(State(state): State<AppState>, Json(req): Json<SolveRequest>) -> Response {
+async fn solve_scenario(request: axum::extract::Request) -> Response {
+    let (req, state) = match body::<SolveRequest>(request).await {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
     let Some(scenario) = build_scenario(&req.scenario) else {
         return ApiError::bad_request("scenario.id is required").into_response();
     };
@@ -257,7 +269,11 @@ async fn solve_scenario(State(state): State<AppState>, Json(req): Json<SolveRequ
     }
 }
 
-async fn verify_scenario(State(state): State<AppState>, Json(req): Json<SolveRequest>) -> Response {
+async fn verify_scenario(request: axum::extract::Request) -> Response {
+    let (req, state) = match body::<SolveRequest>(request).await {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
     let Some(scenario) = build_scenario(&req.scenario) else {
         return ApiError::bad_request("scenario.id is required").into_response();
     };
@@ -302,7 +318,11 @@ async fn verify_scenario(State(state): State<AppState>, Json(req): Json<SolveReq
     }
 }
 
-async fn bills(State(state): State<AppState>, Json(req): Json<BillRequest>) -> Response {
+async fn bills(request: axum::extract::Request) -> Response {
+    let (req, state) = match body::<BillRequest>(request).await {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
     let grid = match resolve_grid(&req.grid) {
         Ok(g) => g,
         Err(e) => return e.into_response(),
@@ -537,6 +557,53 @@ impl IntoResponse for ApiError {
 // ---------------------------------------------------------------------------
 // Request / response types
 // ---------------------------------------------------------------------------
+
+/// Turn Axum's raw deserialisation failure into the same envelope as every
+/// other error.
+///
+/// Axum's default rejection is `Failed to deserialize the JSON body into the
+/// target type: ...` as plain text, which breaks the contract that every error
+/// carries a stable machine-readable `code`. A client — or a test — should never
+/// have to parse prose to learn what went wrong.
+fn json_rejection(err: axum::extract::rejection::JsonRejection) -> ApiError {
+    let status = err.status();
+    let code: &'static str = match &err {
+        axum::extract::rejection::JsonRejection::MissingJsonContentType(_) => {
+            "missing_json_content_type"
+        }
+        axum::extract::rejection::JsonRejection::BytesRejection(_) => "unreadable_body",
+        axum::extract::rejection::JsonRejection::JsonDataError(_) => "schema_mismatch",
+        axum::extract::rejection::JsonRejection::JsonSyntaxError(_) => "invalid_json",
+        _ => "bad_request",
+    };
+    let message = format!("{err}");
+
+    ApiError {
+        status,
+        code,
+        message,
+    }
+}
+
+/// Extract a typed JSON body, or return the shared error envelope.
+///
+/// Without this, Axum answers a malformed body with plain text
+/// (`Failed to deserialize the JSON body ...`), which breaks the rule every
+/// other error path follows: a stable machine-readable `code` and a human
+/// message in the same shape.
+async fn body<T>(mut request: axum::extract::Request) -> Result<(T, AppState), ApiError>
+where
+    T: serde::de::DeserializeOwned + Send + 'static,
+{
+    let state = request
+        .extensions_mut()
+        .remove::<AppState>()
+        .unwrap_or_default();
+    match Json::<T>::from_request(request, &()).await {
+        Ok(Json(value)) => Ok((value, state)),
+        Err(rejection) => Err(json_rejection(rejection)),
+    }
+}
 
 #[derive(Debug, Serialize)]
 struct HealthResponse {
