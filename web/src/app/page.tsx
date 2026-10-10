@@ -9,7 +9,7 @@
  * say and padding it out with chrome would dilute the one thing that matters.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Ribbon, { type RibbonLoad } from "@/components/Ribbon";
 import {
   ApiError,
@@ -109,10 +109,16 @@ export default function Home() {
       .catch((e) => setError(e instanceof ApiError ? e.message : String(e)));
   }, []);
 
+  // Seed the default household exactly once. An earlier version re-seeded
+  // whenever `loads.length` was zero, so removing the last load silently
+  // restored all three defaults -- the user deleted their appliances and the
+  // app put them back.
+  const seeded = useRef(false);
   useEffect(() => {
-    if (loads.length > 0 || !tariffId) return;
+    if (seeded.current || !tariffId) return;
+    seeded.current = true;
     setLoads(initialLoads(SLOTS));
-  }, [tariffId, loads.length]);
+  }, [tariffId]);
 
   // Ask the server for the horizon and its price series whenever the tariff
   // changes. The response carries the grid's start, so the client never has to
@@ -218,7 +224,14 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (!tariffId || loads.length === 0 || prices.length === 0) return;
+    // No loads means no schedule, and no saving. Leaving the previous answer on
+    // screen would claim a saving from appliances the user just deleted.
+    if (loads.length === 0) {
+      setSolution(null);
+      setBills(null);
+      return;
+    }
+    if (!tariffId || prices.length === 0) return;
     // Debounce so a burst of +/- clicks produces one solve rather than five.
     const timer = setTimeout(() => void solve(), 220);
     return () => clearTimeout(timer);
@@ -529,7 +542,12 @@ export default function Home() {
       )}
 
       {/* ---------------------------------------------------------------- */}
-      {solution && bills && (
+      {loads.length === 0 ? (
+        <p className="panel-note">
+          No loads yet. Add one and the ribbon will place it in the cheapest
+          window its deadline allows.
+        </p>
+      ) : solution && bills ? (
         <>
           <h2 className="rule-label">Outcome</h2>
           <div className="outcome">
@@ -572,11 +590,11 @@ export default function Home() {
             </div>
           </div>
         </>
-      )}
+      ) : null}
 
-      {!solution && !error && (
+      {loads.length > 0 && !solution && !error && (
         <div className="state">
-          <span className="solving">Drawing the price curve…</span>
+          <span className="solving">Solving…</span>
         </div>
       )}
 

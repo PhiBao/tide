@@ -87,6 +87,10 @@ pub enum ImportError {
         expected: usize,
         got: usize,
     },
+    /// No row could be read as data: the input was all header, or none of it was
+    /// numeric. Names the first row so the user can see what was rejected,
+    /// rather than reporting an empty file when one was not.
+    UnrecognisedRow { line: usize, text: String },
     /// The series does not begin at the grid's start, so slot alignment is a
     /// guess rather than a fact.
     Misaligned {
@@ -101,6 +105,12 @@ impl core::fmt::Display for ImportError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Empty => f.write_str("no data rows found"),
+            Self::UnrecognisedRow { line, text } => write!(
+                f,
+                "line {line} ('{text}') is neither a recognised column header nor a \
+                 numeric value, so the reader could not tell which column holds the \
+                 energy. Expected a header such as 'timestamp,kwh', or rows of numbers."
+            ),
             Self::BadIntervalLength { minutes } => write!(
                 f,
                 "interval length {minutes} minutes does not divide an hour"
@@ -170,16 +180,27 @@ pub fn read_csv(
         return Err(ImportError::Empty);
     }
 
-    // Strip a header line: any field that is not a number is a header.
+    // A first row with any non-numeric field is a header. Strip it, then decide
+    // what an absence of data actually means.
     let header = split_row(rows[0]);
+    let header_text = rows[0].to_string();
+    let (columns, energy_column_named) = infer_columns(&header);
     if header.iter().any(|field| !is_number(field)) {
         rows.remove(0);
+        if rows.is_empty() {
+            // A recognised header with no data beneath it is simply empty. A row
+            // that is neither a recognised header nor numeric is pasted garbage,
+            // and reporting "no data rows" would send the user hunting for a
+            // missing line instead of a malformed one.
+            if energy_column_named {
+                return Err(ImportError::Empty);
+            }
+            return Err(ImportError::UnrecognisedRow {
+                line: 1,
+                text: header_text,
+            });
+        }
     }
-    if rows.is_empty() {
-        return Err(ImportError::Empty);
-    }
-
-    let columns = infer_columns(&header);
 
     let mut import_wh: Vec<u128> = vec![0; grid.slot_count as usize];
     let mut export_wh: Vec<u128> = vec![0; grid.slot_count as usize];
@@ -284,7 +305,9 @@ struct Columns {
     expected_len: usize,
 }
 
-fn infer_columns(header: &[&str]) -> Columns {
+/// Resolve the columns, and report whether the energy column was actually
+/// recognised (as opposed to defaulting to the last field).
+fn infer_columns(header: &[&str]) -> (Columns, bool) {
     let named = header.iter().enumerate().find_map(|(i, f)| {
         let f = f.trim().trim_matches('"').to_ascii_lowercase();
         if matches!(
@@ -330,18 +353,19 @@ fn infer_columns(header: &[&str]) -> Columns {
         }
     });
 
-    let (energy, export) = match named {
+    let (energy, named_energy) = match named {
         // A recognisable header told us where the energy column is.
-        Some(energy) => (energy, export),
+        Some(energy) => (energy, true),
         // No recognisable header: the last column is the energy.
-        None => (header.len().saturating_sub(1), export),
+        None => (header.len().saturating_sub(1), false),
     };
-    Columns {
+    let columns = Columns {
         time,
         energy,
         export,
         expected_len: header.len(),
-    }
+    };
+    (columns, named_energy)
 }
 
 fn split_row(row: &str) -> Vec<&str> {
@@ -659,6 +683,25 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, ImportError::WrongFieldCount { .. }), "{err}");
+    }
+
+    #[test]
+    fn pasted_garbage_is_reported_as_such_not_as_an_empty_file() {
+        // "no data rows found" sent the user hunting for a missing line when the
+        // real problem was a malformed one.
+        let g = day_grid();
+        let err = read_csv("garbage", EnergyUnit::KilowattHours, 15, &g).unwrap_err();
+        assert!(
+            matches!(err, ImportError::UnrecognisedRow { .. }),
+            "expected UnrecognisedRow, got {err}"
+        );
+        assert!(err.to_string().contains("column"), "{err}");
+
+        // A recognised header with no data beneath it is genuinely empty.
+        assert_eq!(
+            read_csv("timestamp,kwh\n", EnergyUnit::KilowattHours, 15, &g).unwrap_err(),
+            ImportError::Empty
+        );
     }
 
     #[test]
