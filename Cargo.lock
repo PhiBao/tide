@@ -839,7 +839,9 @@ dependencies = [
 name = "tide-worker"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "axum",
+ "futures-util",
  "http",
  "serde",
  "serde_json",

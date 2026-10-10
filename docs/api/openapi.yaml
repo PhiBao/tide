@@ -219,6 +219,80 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInput"
 
+  /api/history/import:
+    post:
+      tags: [solve]
+      summary: Store a usage export durably
+      description: |
+        Persists an interval export so a whole period can be compared across
+        tariffs. Idempotent: the unique key is the interval's start time and
+        length, so re-importing the same export stores nothing twice.
+      operationId: historyImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [grid, csv, unit, interval_minutes]
+              properties:
+                grid:
+                  $ref: "#/components/schemas/Grid"
+                csv:
+                  type: string
+                unit:
+                  type: string
+                  enum: [wh, kwh]
+                interval_minutes:
+                  type: integer
+                  enum: [5, 10, 15, 20, 30, 60]
+      responses:
+        "200":
+          description: What was imported, and what is now stored
+        "422":
+          $ref: "#/components/responses/InvalidInput"
+
+  /api/history/compare:
+    post:
+      tags: [solve]
+      summary: Rank every bundled tariff over a stored period
+      description: |
+        The question this exists to answer: which tariff should I be on? Returns
+        every bundled tariff ranked by total cost over the stored readings,
+        cheapest first, with deltas against both the cheapest and the current
+        tariff.
+      operationId: historyCompare
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from_epoch_minutes, to_epoch_minutes]
+              properties:
+                from_epoch_minutes:
+                  type: integer
+                  format: int64
+                to_epoch_minutes:
+                  type: integer
+                  format: int64
+                current_tariff_id:
+                  type: [string, "null"]
+      responses:
+        "200":
+          description: The period summary and every tariff, ranked
+        "422":
+          $ref: "#/components/responses/InvalidInput"
+
+  /api/history/bills:
+    get:
+      tags: [solve]
+      summary: Bills already stored
+      operationId: historyBills
+      responses:
+        "200":
+          description: Stored bills, newest first
+
   /api/bills:
     post:
       tags: [solve]

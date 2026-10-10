@@ -15,6 +15,11 @@ tide-core = { workspace = true }
 tide-api = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+# The `Store` impl for D1 needs the `?Send` flavour of async-trait, because D1
+# futures are not `Send` on wasm32.
+async-trait = "0.1"
+# `worker::Body` wraps a stream; one-chunk streams are how JSON bodies are made.
+futures-util = "0.3"
 # `http` gives us the hyper/adapter bridge; `axum` enables Router interop.
 worker = { version = "0.8", features = ["http", "axum", "d1"] }
 # `Router::call` comes from `tower_service::Service`, which the workers-rs
