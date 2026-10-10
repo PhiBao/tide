@@ -37,6 +37,7 @@ pub mod rates;
 pub mod solver;
 pub mod tariffs;
 pub mod timegrid;
+pub mod usage;
 pub mod verify;
 pub mod zone;
 
@@ -52,6 +53,7 @@ pub use oracle::OracleVerdict;
 pub use rates::{Bill, BillLine, Tariff, Usage};
 pub use solver::ScheduleSolution;
 pub use timegrid::SlotGrid;
+pub use usage::{EnergyUnit, ImportError, TimeColumn, UsageImport};
 
 /// Every error this crate can return, in one enum.
 ///

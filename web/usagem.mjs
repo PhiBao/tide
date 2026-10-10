@@ -1,0 +1,22 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 1200 }, deviceScaleFactor: 2 });
+const errs = [];
+page.on('pageerror', e => errs.push(e.message));
+await page.goto('http://localhost:3999/', { waitUntil: 'networkidle', timeout: 60000 });
+await page.waitForTimeout(3200);
+// click "Use a sample", then bill it
+await page.getByRole('button', { name: 'Use a sample' }).click();
+await page.waitForTimeout(500);
+const preview = await page.evaluate(() => document.querySelector('.usage-input').value.split('\n').length);
+console.log('sample rows loaded:', preview);
+await page.getByRole('button', { name: 'Bill this usage' }).click();
+await page.waitForTimeout(3500);
+const t = await page.evaluate(() => document.body.innerText);
+const m = t.match(/Your usage, on this tariff[\s\S]{0,120}/);
+console.log('panel:', m ? m[0].replace(/\n/g,' | ') : 'NOT FOUND');
+const r = t.match(/Intervals read[\s\S]{0,60}/);
+console.log('readout:', r ? r[0].replace(/\n/g, ' ') : 'NOT FOUND');
+console.log('page errors:', errs.length ? errs.slice(0,2) : '(none)');
+await page.screenshot({ path: '/tmp/shots/usage.png', fullPage: true });
+await browser.close();

@@ -270,7 +270,7 @@ What is real, what is a fixture, and what is not:
 | The brute-force oracle | **Real.** Exhaustive enumeration with a documented node budget; refuses rather than guessing on large instances. |
 | DST handling | **Real.** US and EU rules modelled explicitly, with the local-standard/local-daylight convention distinction the US requires. Covered by the zone tests. |
 | Bundled tariffs | **Real published rate structures**, with source URLs and retrieval dates recorded in the API response. Not live feeds — a tariff is a rate *shape*, and Tide's job is the arithmetic over it. |
-| Usage series | **Not simulated, and not yet importable.** The scenario's 17 kWh is a demonstration set, clearly labelled, and there is no "demo mode" that invents usage — but there is also no CSV or smart-meter import yet, so a household cannot enter its own history. See Limitations. |
+| Usage series | **Real and importable.** Paste a CSV export from your utility or smart meter; it is billed by the same engine, exactly. The bundled demonstration set is clearly labelled as a sample. |
 | Hardware integration | **Not implemented, and not claimed.** Tide produces the *decision*; it does not actuate a plug. See Limitations. |
 
 Every number in the UI is computed by the same integer arithmetic the tests
@@ -316,10 +316,10 @@ assert on. There is no mock path anywhere in the codebase.
   of scope: Tide's value is the arithmetic and the interaction model.
 - **No persistence yet.** Scenarios live in the URL. A D1 schema is sketched for
   durable shared scenarios but is not wired up.
-- **No usage import.** The only scenario is the bundled demonstration set. The
-  rate engine is exercised against it thoroughly, but a household cannot yet
-  enter its own 12 months of interval data — which is the step that turns a
-  demonstration into a personal answer.
+- **Usage import reads one day at a time.** Paste a CSV export and the app bills
+  that day exactly, but it does not accumulate a 12-month history or compare a
+  year of tariffs yet — which is the step that turns a demonstration into a
+  personal answer. Multi-period aggregation is the next thing to build.
 - **Savings figures are illustrative.** The default scenario demonstrates the
   mechanism on a real published rate shape; the per-household figure depends
   entirely on the usage you supply.
@@ -333,10 +333,9 @@ assert on. There is no mock path anywhere in the codebase.
    round-trip efficiency and cycle cost modelled. The engine already supports it;
    the UI does not yet.
 3. **Durable shared scenarios** via D1, so a link is a real persisted object.
-4. **Usage import** from a utility's Green Button CSV or a smart-meter export.
-   The README previously listed this as a limitation while the Verification
-   table implied it already worked, which is exactly the kind of drift this
-   project is supposed to be against.
+4. **Multi-period usage history** — accumulate 12 months of imported interval
+   data and compare a year of every tariff against it, rather than a single
+   day.
 5. **Beyond electricity.** The engine is domain-agnostic: any horizon + cost
    curve + deadlines + capacity cap is the same problem. Obligation deadlines,
    cloud job scheduling, and toll or charging costs are the same shape.

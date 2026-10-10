@@ -187,6 +187,38 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInput"
 
+  /api/usage:
+    post:
+      tags: [solve]
+      summary: Read a CSV usage series and bill it exactly
+      description: |
+        Turns an interval export from a utility or smart meter into a metered
+        series and bills it with the chosen tariff.
+
+        The parser refuses to guess: a series whose timestamps do not line up
+        with the grid's start is rejected rather than shifted, a fractional
+        kilowatt-hour is not rounded to a whole one, and rows beyond the horizon
+        are **counted and reported** so an import can never quietly understate a
+        bill.
+      operationId: importUsage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UsageRequest"
+      responses:
+        "200":
+          description: What the parser read, and the exact bill
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/InvalidInput"
+
   /api/bills:
     post:
       tags: [solve]
@@ -627,6 +659,62 @@ components:
         enumerated:
           type: boolean
         nodes_explored:
+          type: integer
+          format: int64
+
+    UsageRequest:
+      type: object
+      required: [tariff_id, grid, csv, unit, interval_minutes]
+      properties:
+        tariff_id:
+          type: string
+        grid:
+          $ref: "#/components/schemas/Grid"
+        csv:
+          type: string
+          description: |
+            The CSV text. An optional header may name the columns
+            (`timestamp`, `kwh`/`wh`/`energy`/`usage`/`import`, `export`).
+            Rows are `timestamp,value` or a bare value per line. Comma, tab
+            and semicolon are all accepted.
+        unit:
+          type: string
+          enum: [wh, kwh, watt_hours, kilowatt_hours]
+          description: What the numeric column means. Guessing is the most common import bug.
+        interval_minutes:
+          type: integer
+          enum: [5, 10, 15, 20, 30, 60]
+          description: Length of each interval. Must divide an hour.
+
+    UsageResponse:
+      type: object
+      required: [import, bill]
+      properties:
+        import:
+          $ref: "#/components/schemas/UsageImport"
+        bill:
+          $ref: "#/components/schemas/BillResponse"
+
+    UsageImport:
+      type: object
+      required: [import_wh, export_wh, intervals_read, intervals_outside_horizon, total_import_wh]
+      properties:
+        import_wh:
+          type: array
+          items:
+            type: integer
+            format: int64
+        export_wh:
+          type: array
+          items:
+            type: integer
+            format: int64
+        intervals_read:
+          type: integer
+        intervals_outside_horizon:
+          type: integer
+          description: Rows that fell beyond the horizon; counted, not silently dropped
+        total_import_wh:
           type: integer
           format: int64
 

@@ -8,6 +8,42 @@
 
 export const API_VERSION = 1;
 
+/**
+ * Format epoch minutes as an ISO-8601 timestamp in UTC.
+ *
+ * The API speaks epoch minutes everywhere; this is the one place the client
+ * turns a number back into a timestamp, and it exists solely so the sample
+ * series can be anchored to the horizon the server chose.
+ */
+export function epochMinutesToIso(minutes: number): string {
+  const d = new Date(minutes * 60_000);
+  return d.toISOString().replace(/\:\d\d\.\d\d\dZ$/, ":00Z");
+}
+
+/**
+ * Sample intervals, anchored to the horizon the server chose.
+ *
+ * Hard-coding a date broke the moment the horizon rolled past it: the parser
+ * (correctly) refused to align a series beginning on a different day, so the
+ * demo failed with an alignment error the next morning. Anchoring the sample to
+ * `horizon.start` means it always matches, whatever day it is read.
+ */
+export function sampleUsageCsv(startEpochMinutes: number, intervals = 20): string {
+  const rows: string[] = ["timestamp,kwh"];
+  // A plausible domestic profile: quiet overnight, a morning rise, and a
+  // midday ramp. Values are illustrative and labelled as such in the UI.
+  const profile = [
+    0.42, 0.4, 0.38, 0.41, 0.55, 0.6, 0.58, 0.62, 0.71, 0.75,
+    0.74, 0.78, 0.9, 0.94, 0.92, 0.96, 1.05, 1.1, 1.08, 1.12,
+  ];
+  for (let i = 0; i < intervals; i++) {
+    const at = startEpochMinutes + i * 15;
+    const value = profile[i % profile.length];
+    rows.push(`${epochMinutesToIso(at)},${value.toFixed(2)}`);
+  }
+  return rows.join("\n");
+}
+
 export interface Grid {
   start_epoch_minutes: number;
   slot_minutes: number;
@@ -179,6 +215,34 @@ export const api = {
     request<BillResponse>("/api/bills", {
       method: "POST",
       body: JSON.stringify({ tariff_id: tariffId, grid, import_wh: importWh, export_wh: exportWh }),
+    }),
+
+  /** Read a CSV usage series and bill it, exactly, with the chosen tariff. */
+  usage: (
+    tariffId: string,
+    grid: Grid,
+    csv: string,
+    unit: "wh" | "kwh",
+    intervalMinutes: number,
+  ) =>
+    request<{
+      import: {
+        import_wh: number[];
+        export_wh: number[];
+        intervals_read: number;
+        intervals_outside_horizon: number;
+        total_import_wh: number;
+      };
+      bill: BillResponse;
+    }>("/api/usage", {
+      method: "POST",
+      body: JSON.stringify({
+        tariff_id: tariffId,
+        grid,
+        csv,
+        unit,
+        interval_minutes: intervalMinutes,
+      }),
     }),
 
   verify: (tariffId: string, scenario: Scenario, nodeBudget?: number) =>

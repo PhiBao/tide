@@ -90,6 +90,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/solve", post(solve_scenario))
         .route("/api/solve/verify", post(verify_scenario))
         .route("/api/bills", post(bills))
+        .route("/api/usage", post(usage_import))
         .fallback(not_found)
         .layer(
             tower_http::cors::CorsLayer::new()
@@ -748,6 +749,70 @@ struct VerifyResponse {
     badge: String,
     nodes_explored: u64,
     enumerated: bool,
+}
+
+async fn usage_import(request: axum::extract::Request) -> Response {
+    let (req, state) = match body::<UsageRequest>(request).await {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
+    let grid = match resolve_grid(&req.grid) {
+        Ok(g) => g,
+        Err(e) => return e.into_response(),
+    };
+    let Some(tariff) = state.tariff(&req.tariff_id) else {
+        return ApiError::not_found(format!("no tariff with id '{}'", req.tariff_id))
+            .into_response();
+    };
+
+    match tide_core::usage::read_csv(&req.csv, req.unit, req.interval_minutes, &grid) {
+        Ok(import) => {
+            let usage = tide_core::rates::Usage {
+                import_wh: import.import_wh.iter().copied().map(Wh).collect(),
+                export_wh: import.export_wh.iter().copied().map(Wh).collect(),
+            };
+            match Bill::compute(tariff, &grid, &usage) {
+                Ok(bill) => Json(UsageResponse {
+                    import,
+                    bill: BillResponse {
+                        total_micro_usd: bill.total.0,
+                        lines: bill
+                            .lines
+                            .iter()
+                            .map(|l| BillLineResponse {
+                                label: l.label.clone(),
+                                energy_wh: l.energy_wh.0,
+                                rate_micro_usd_per_kwh: l.rate.map(|r| r.0),
+                                amount_micro_usd: l.amount.0,
+                                detail: l.detail.clone(),
+                            })
+                            .collect(),
+                    },
+                })
+                .into_response(),
+                Err(e) => ApiError::unprocessable(format!("{e:?}")).into_response(),
+            }
+        }
+        Err(e) => ApiError::unprocessable(e.to_string()).into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct UsageRequest {
+    tariff_id: String,
+    grid: GridRequest,
+    /// The CSV text itself.
+    csv: String,
+    /// What the numeric column means. Guessing is the most common import bug.
+    unit: tide_core::usage::EnergyUnit,
+    /// Length of each interval in minutes. Must divide an hour.
+    interval_minutes: u16,
+}
+
+#[derive(Debug, Serialize)]
+struct UsageResponse {
+    import: tide_core::usage::UsageImport,
+    bill: BillResponse,
 }
 
 #[derive(Debug, Deserialize)]

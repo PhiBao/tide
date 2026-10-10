@@ -14,6 +14,7 @@ import Ribbon, { type RibbonLoad } from "@/components/Ribbon";
 import {
   ApiError,
   api,
+  sampleUsageCsv,
   kwh,
   rate,
   usd,
@@ -69,6 +70,15 @@ export default function Home() {
   const [solution, setSolution] = useState<SolveResponse | null>(null);
   const [bills, setBills] = useState<{ scheduled: BillResponse; baseline: BillResponse } | null>(null);
   const [expandedLine, setExpandedLine] = useState<string | null>(null);
+  const [usageCsv, setUsageCsv] = useState("");
+  const [usageUnit, setUsageUnit] = useState<"kwh" | "wh">("kwh");
+  const [usageInterval, setUsageInterval] = useState(15);
+  const [usageResult, setUsageResult] = useState<{
+    import: { intervals_read: number; intervals_outside_horizon: number; total_import_wh: number };
+    bill: BillResponse;
+  } | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [usageError, setUsageError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -213,6 +223,35 @@ export default function Home() {
     const timer = setTimeout(() => void solve(), 220);
     return () => clearTimeout(timer);
   }, [tariffId, loadsKey, loads.length, prices.length, solve]);
+
+  const billMyUsage = useCallback(async () => {
+    if (!tariffId || !horizon || usageCsv.trim().length === 0) return;
+    setUsageLoading(true);
+    setUsageError(null);
+    setUsageResult(null);
+    try {
+      const result = await api.usage(
+        tariffId,
+        {
+          start_epoch_minutes: horizon.start,
+          slot_minutes: horizon.slotMinutes,
+          slots: horizon.slots,
+        },
+        usageCsv,
+        usageUnit,
+        usageInterval,
+      );
+      setUsageResult(result);
+    } catch (e) {
+      // The parser's errors are written for a person: they say which line and
+      // why, so they are surfaced verbatim rather than summarised.
+      setUsageError(
+        e instanceof ApiError ? `${e.code}: ${e.message}` : String(e),
+      );
+    } finally {
+      setUsageLoading(false);
+    }
+  }, [tariffId, horizon, usageCsv, usageUnit, usageInterval]);
 
   const ribbonLoads: RibbonLoad[] = useMemo(
     () =>
@@ -364,6 +403,130 @@ export default function Home() {
       <div style={{ marginTop: 12 }}>
         <button onClick={addLoad}>+ Add a load</button>
       </div>
+
+      {/* ---------------------------------------------------------------- */}
+      <h2 className="rule-label">Your own usage</h2>
+      <p className="panel-note">
+        Paste an interval export from your utility or smart meter. It is billed
+        by the same engine as everything else, exactly — the parser refuses to
+        guess rather than quietly truncating or rounding your data.
+      </p>
+
+      <div className="usage">
+        <textarea
+          className="usage-input"
+          value={usageCsv}
+          onChange={(e) => setUsageCsv(e.target.value)}
+          spellCheck={false}
+          rows={8}
+          aria-label="Usage CSV"
+          placeholder={"timestamp,kwh\n2026-10-10T00:00:00Z,0.42\n2026-10-10T00:15:00Z,0.40"}
+        />
+
+        <div className="usage-controls">
+          <label>
+            Unit
+            <select
+              value={usageUnit}
+              onChange={(e) => setUsageUnit(e.target.value as "kwh" | "wh")}
+            >
+              <option value="kwh">kWh</option>
+              <option value="wh">Wh</option>
+            </select>
+          </label>
+          <label>
+            Interval
+            <select
+              value={usageInterval}
+              onChange={(e) => setUsageInterval(Number(e.target.value))}
+            >
+              {[5, 10, 15, 20, 30, 60].map((m) => (
+                <option key={m} value={m}>
+                  {m} min
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="usage-buttons">
+            <button
+              type="button"
+              className="primary"
+              onClick={() => void billMyUsage()}
+              disabled={usageLoading || usageCsv.trim().length === 0 || !horizon}
+            >
+              {usageLoading ? "Billing…" : "Bill this usage"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // Anchored to the horizon the server chose, so the sample always
+                // aligns — a hard-coded date stops working the moment the
+                // horizon rolls past it.
+                setUsageCsv(sampleUsageCsv(horizon?.start ?? 0));
+                setUsageUnit("kwh");
+                setUsageInterval(15);
+              }}
+              disabled={!horizon}
+            >
+              Use a sample
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {usageError && (
+        <pre className="state error" style={{ marginTop: 12 }}>
+          {usageError}
+        </pre>
+      )}
+
+      {usageResult && (
+        <div className="bills" style={{ marginTop: 14 }}>
+          <div className="bill">
+            <div className="bill-head">
+              <h3>Your usage, on this tariff</h3>
+              <div className="bill-total">{usd(usageResult.bill.total_micro_usd)}</div>
+            </div>
+            <BillTable
+              bill={usageResult.bill}
+              expanded={expandedLine}
+              setId={setExpandedLine}
+              prefix="yours"
+            />
+          </div>
+          <div className="bill">
+            <div className="bill-head">
+              <h3>What the parser read</h3>
+              <div className="bill-total">{kwh(usageResult.import.total_import_wh)}</div>
+            </div>
+            <table>
+              <tbody>
+                <tr>
+                  <td>Intervals read</td>
+                  <td className="num">{usageResult.import.intervals_read}</td>
+                </tr>
+                <tr>
+                  <td>Outside the horizon</td>
+                  <td className="num">
+                    {usageResult.import.intervals_outside_horizon}
+                  </td>
+                </tr>
+                <tr>
+                  <td>Energy metered</td>
+                  <td className="num">{kwh(usageResult.import.total_import_wh)}</td>
+                </tr>
+              </tbody>
+            </table>
+            {usageResult.import.intervals_outside_horizon > 0 && (
+              <p className="panel-note">
+                Rows beyond the horizon are counted here and not billed, so an
+                import can never quietly understate a bill.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ---------------------------------------------------------------- */}
       {solution && bills && (
