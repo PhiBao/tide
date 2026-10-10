@@ -287,3 +287,78 @@ jobs:
           exit 1
         env:
           URL: https://tide.kiter0211.workers.dev
+
+  # -------------------------------------------------------------------------
+  # API contract suite.
+  #
+  # This runs against PRODUCTION, after the deploy, and only on main. That is a
+  # deliberate limitation, not an oversight:
+  #
+  # `--target-url` is silently ignored for backend projects — verified by
+  # pointing it at a URL that does not serve this API and watching all 14 tests
+  # still pass. And the Starter plan allows exactly one TestSprite environment,
+  # so per-PR environment names are not available either. Wiring the backend
+  # suite into the PR gate with `--target-url` would therefore produce a green
+  # check that proves nothing about the pull request.
+  #
+  # The per-PR gate is the frontend suite, which does honour `--target-url` and
+  # tests the branch's own preview. This suite is the API contract: 14 tests
+  # asserting exact micro-dollar totals against the deployed service.
+  # -------------------------------------------------------------------------
+  api-contract:
+    name: API Contract
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install TestSprite CLI
+        run: npm install -g @testsprite/testsprite-cli
+
+      - name: Run the API contract suite against production
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+          API_PROJECT_ID: ${{ secrets.TESTSPRITE_API_PROJECT_ID }}
+          PRODUCTION_URL: https://tide.kiter0211.workers.dev
+        run: |
+          set -o pipefail
+          testsprite test run --all \
+            --project "$API_PROJECT_ID" \
+            --wait \
+            --max-concurrency 4 \
+            --timeout 900 \
+            --output json \
+            --report junit --report-file ./api-junit.xml \
+            --summary-file ./api-summary.json \
+            > api-result.json
+          cat api-summary.json
+
+      - name: Summarise
+        if: always()
+        run: |
+          total=$(jq -r .total api-summary.json 2>/dev/null || echo "?")
+          passed=$(jq -r .passed api-summary.json 2>/dev/null || echo "?")
+          failed=$(jq -r .failed api-summary.json 2>/dev/null || echo "?")
+          {
+            echo "## API contract suite"
+            echo ""
+            echo "Against $PRODUCTION_URL, after deployment."
+            echo ""
+            echo "\`$passed / $total\` passed, \`$failed\` failed."
+            echo ""
+            echo "This job is scoped to production on purpose. The per-PR gate is the"
+            echo "TestSprite job, which tests the branch's own preview; --target-url is"
+            echo "silently ignored for backend projects, so a backend gate here would prove"
+            echo "nothing about the pull request."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-contract-junit
+          path: api-junit.xml
+          if-no-files-found: warn
