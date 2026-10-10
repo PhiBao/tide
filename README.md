@@ -130,7 +130,7 @@ DNS-safe by construction and removes the guesswork.
 | Criterion | How Tide answers it |
 |---|---|
 | 40% Project Quality | A polished, deterministic app with deliberate loading, empty and error states; 85 Rust tests behind it (55 core unit, 14 solver integration, 16 HTTP). |
-| 40% Tests That Run Themselves | **33 tests, all green.** 19 UI tests gating every PR against that PR's own preview, plus 14 authored API tests asserting exact micro-dollar totals. Coverage spans tariff switching, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, and every failure mode. |
+| 40% Tests That Run Themselves | **48 tests, all green.** 32 UI tests gating every PR against that PR's own preview, plus 16 authored API tests asserting exact micro-dollar totals. Coverage spans all four tariffs, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, the empty state, mobile row layout, and every failure mode. |
 | 20% Innovation | The proof-backed optimiser, the exact rate engine, and the per-PR preview architecture |
 | ∞ Engagement | Long-form write-ups, Discord and X participation |
 
@@ -223,7 +223,7 @@ NEXT_PUBLIC_API_BASE=https://tide.kiter0211.workers.dev
 
 | Command | What it does |
 |---|---|
-| `cargo test --workspace` | The full suite: 88 tests |
+| `cargo test --workspace` | The full suite: 106 tests |
 | `cargo clippy --workspace --tests -- -D warnings` | Lint; CI treats any warning as a failure |
 | `cargo fmt --all -- --check` | Format; verified from a clean clone, not just locally |
 | `pnpm --dir web build` | Static frontend export |

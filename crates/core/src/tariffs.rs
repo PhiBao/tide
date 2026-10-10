@@ -146,26 +146,45 @@ pub fn overnight_ev_tariff() -> Tariff {
     }
 }
 
-/// Summer afternoon peak, with a shoulder season and a winter floor.
+/// A four-season tariff: a summer afternoon peak, a winter evening peak, and a
+/// distinct shoulder rate.
 ///
-/// Demonstrates seasonal period selection via the `months` bitmask.
+/// The first version had only a summer peak, so for eight months of the year it
+/// was indistinguishable from the flat tariff — one of the four bundled tariffs
+/// silently demonstrated nothing. A tariff meant to show calendar variation has
+/// to vary all year round to be worth including.
 #[must_use]
 pub fn tou_summer_afternoon() -> Tariff {
-    let summer = (1 << 5) | (1 << 6) | (1 << 7) | (1 << 8); // Jun..Sep
+    // Bitmask of months: bit 0 = January, so June..September is bits 5..8.
+    let summer = (1 << 5) | (1 << 6) | (1 << 7) | (1 << 8);
+    // October..March, where the peak moves to the winter evening. April and
+    // May fall in neither window and take the shoulder rate — but October must
+    // be covered, or the tariff is flat for a month it is being shown in.
+    let winter = (1 << 9) | (1 << 10) | (1 << 11) | (1 << 0) | (1 << 1) | (1 << 2);
+
     Tariff {
         id: "summer-afternoon".into(),
-        name: "Summer afternoon peak".into(),
+        name: "Four-season peak".into(),
         zone: LocalZone::us_pacific(),
         periods: vec![
             RatePeriod::window(
                 "summer-peak",
                 "Summer peak (4-9pm)",
-                DaySelector::Weekdays,
+                DaySelector::EveryDay,
                 960,
                 1_260,
                 crate::money::MicroUsdPerKwh(520_000),
             )
             .with_months(summer),
+            RatePeriod::window(
+                "winter-peak",
+                "Winter peak (6-9pm)",
+                DaySelector::EveryDay,
+                1_140,
+                1_260,
+                crate::money::MicroUsdPerKwh(480_000),
+            )
+            .with_months(winter),
             RatePeriod::flat("base", crate::money::MicroUsdPerKwh(180_000)),
         ],
         fixed_charges: vec![FixedCharge {
@@ -186,6 +205,7 @@ pub fn tou_summer_afternoon() -> Tariff {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::civil::CivilDate;
     use crate::timegrid::SlotGrid;
 
     #[test]
@@ -229,14 +249,58 @@ mod tests {
     }
 
     #[test]
-    fn seasonal_period_only_applies_in_its_season() {
+    fn seasonal_periods_only_apply_in_their_season() {
+        // Look periods up by id rather than by index: the index shifts whenever
+        // a tariff gains a period, and a stale index makes a passing test pass
+        // for the wrong reason.
         let tariff = tou_summer_afternoon();
-        // A weekday in July at 17:00 local is inside the summer peak.
-        let july = crate::civil::CivilDate::new(2026, 7, 15);
-        assert_eq!(july.month, 7);
-        assert_eq!(tariff.period_at(july, 1_020), Some(0));
-        // The same clock time in January falls through to the flat rate.
-        let january = crate::civil::CivilDate::new(2026, 1, 15);
-        assert_eq!(tariff.period_at(january, 1_020), Some(1));
+
+        fn period_id_at(t: &Tariff, date: CivilDate, minute: u16) -> Option<String> {
+            t.period_at(date, minute).map(|i| t.periods[i].id.clone())
+        }
+
+        // A weekday in July at 17:00 sits inside the summer peak.
+        assert_eq!(
+            period_id_at(&tariff, CivilDate::new(2026, 7, 15), 1_020).as_deref(),
+            Some("summer-peak")
+        );
+        // The same clock time in January is not in the summer window, and not in
+        // the winter window either (which runs 19:00-21:00).
+        assert_eq!(
+            period_id_at(&tariff, CivilDate::new(2026, 1, 15), 1_020).as_deref(),
+            Some("base")
+        );
+        // And the winter window does apply in January at 20:00.
+        assert_eq!(
+            period_id_at(&tariff, CivilDate::new(2026, 1, 15), 1_200).as_deref(),
+            Some("winter-peak")
+        );
+    }
+
+    #[test]
+    fn every_tariff_varies_across_the_year_it_will_be_shown_in() {
+        // A bundled tariff that renders identically to the flat tariff for eight
+        // months of the year is not worth bundling. Sample a full year at
+        // hourly resolution and require at least two distinct prices.
+        let grid = SlotGrid::new(
+            crate::civil::days_from_civil(2026, 1, 1) * 1_440,
+            60,
+            24 * 366,
+        );
+        for tariff in bundled() {
+            // A flat tariff is flat on purpose: it is the teaching example, and
+            // requiring it to vary would be requiring it to be something else.
+            if tariff.id == "flat" {
+                continue;
+            }
+            let series = tariff.price_series(&grid);
+            let distinct: std::collections::BTreeSet<u64> =
+                series.iter().map(|s| s.weighted_price).collect();
+            assert!(
+                distinct.len() > 1,
+                "tariff '{}' has a single price all year, so it demonstrates nothing",
+                tariff.id
+            );
+        }
     }
 }
