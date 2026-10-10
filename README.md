@@ -315,12 +315,24 @@ assert on. There is no mock path anywhere in the codebase.
 - **Tariff data is bundled, not live.** Adding a real utility feed (Green Button)
   is a data-integration problem, not an engineering one, and is deliberately out
   of scope: Tide's value is the arithmetic and the interaction model.
-- **No persistence yet.** Scenarios live in the URL. A D1 schema is sketched for
-  durable shared scenarios but is not wired up.
-- **Usage import reads one day at a time.** Paste a CSV export and the app bills
-  that day exactly, but it does not accumulate a 12-month history or compare a
-  year of tariffs yet — which is the step that turns a demonstration into a
-  personal answer. Multi-period aggregation is the next thing to build.
+- **History is per-session, not per-account.** A cookie partitions the store so
+  one visitor's readings never mix with another's, and "Forget my data" removes
+  them. But a partition key is not a credential: it keeps data apart, it does not
+  protect it. There is no login. Treat this as a demo-grade boundary, not an
+  account system.
+- **Scenarios live in the URL, not in the store.** The loads and the horizon are
+  encoded in the page rather than persisted, so saving a scenario means saving a
+  link. Only imported *usage* is stored durably. Sharing a scenario that way is
+  deliberate — it needs no account — but it means a scenario is not a durable
+  object you can name and return to.
+- **Panels are a long page, not a workspace.** The ribbon, the load manifest, the
+  single-day bill, and the tariff ranking are sections of one scrolling page.
+  That is the right shape for one decision and the wrong shape for managing a
+  year of them.
+- **Aggregation is exact but unindexed.** `history_compare` reads every stored
+  interval in the requested range and prices each tariff over all of them. That
+  is fine for a year of one household and would want pre-aggregation before it
+  met a thousand.
 - **Savings figures are illustrative.** The default scenario demonstrates the
   mechanism on a real published rate shape; the per-household figure depends
   entirely on the usage you supply.
