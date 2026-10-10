@@ -814,6 +814,7 @@ dependencies = [
 name = "tide-api"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "axum",
  "http",
  "http-body-util",

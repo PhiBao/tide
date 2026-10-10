@@ -47,3 +47,9 @@ name = "tide-preview"
 
 [env.preview.observability]
 enabled = false
+
+[[d1_databases]]
+binding = "tide"
+database_name = "tide"
+database_id = "cfed1aac-7a4c-42ef-8491-338fabfb0c75"
+migrations_dir = "migrations"

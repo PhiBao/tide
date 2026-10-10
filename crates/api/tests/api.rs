@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 use tower::ServiceExt;
 
 fn app() -> axum::Router {
-    tide_api::router(tide_api::AppState::new())
+    tide_api::router(tide_api::AppState::new(), ())
 }
 
 async fn post_json(uri: &str, body: Value) -> (StatusCode, Value) {

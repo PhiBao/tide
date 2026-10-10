@@ -16,7 +16,7 @@ tide-api = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 # `http` gives us the hyper/adapter bridge; `axum` enables Router interop.
-worker = { version = "0.8", features = ["http", "axum"] }
+worker = { version = "0.8", features = ["http", "axum", "d1"] }
 # `Router::call` comes from `tower_service::Service`, which the workers-rs
 # bridging requires (see the upstream axum example).
 tower-service = "0.3"

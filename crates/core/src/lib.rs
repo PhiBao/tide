@@ -30,6 +30,7 @@
 //! | [`verify`] | Running solver and oracle against each other |
 
 pub mod civil;
+pub mod history;
 pub mod model;
 pub mod money;
 pub mod oracle;

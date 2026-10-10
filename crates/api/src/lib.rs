@@ -46,8 +46,46 @@ pub struct AppState {
     tariffs: Arc<Vec<Tariff>>,
 }
 
+/// The persistence surface the API needs.
+///
+/// A trait rather than a concrete D1 type, so the router compiles and tests
+/// without a Cloudflare binding and an alternative store can be swapped in
+/// without touching the HTTP layer.
+#[async_trait::async_trait(?Send)]
+pub trait Store: Send + Sync {
+    async fn insert_readings(
+        &self,
+        readings: &[tide_core::history::Reading],
+    ) -> Result<usize, String>;
+    async fn readings_between(
+        &self,
+        from: i64,
+        to: i64,
+    ) -> Result<Vec<tide_core::history::Reading>, String>;
+    async fn record_bill(
+        &self,
+        from: i64,
+        to: i64,
+        tariff_id: &str,
+        total_micro_usd: i64,
+        total_import_wh: u128,
+    ) -> Result<(), String>;
+    async fn recent_bills(&self, limit: usize) -> Result<Vec<StoredBill>, String>;
+}
+
+/// A bill already stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StoredBill {
+    pub from_epoch_minutes: i64,
+    pub to_epoch_minutes: i64,
+    pub tariff_id: String,
+    pub total_micro_usd: i64,
+    pub total_import_wh: u64,
+    pub created_at: String,
+}
+
 impl AppState {
-    /// Build state with the bundled tariffs.
+    /// Build state with the bundled tariffs and no store.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -80,7 +118,13 @@ impl Default for AppState {
 }
 
 /// Build the router. Same router on every target.
-pub fn router(state: AppState) -> Router {
+/// The router. The second parameter exists so a Cloudflare `Env` can be
+/// threaded through to a D1-backed store; it is ignored when there is none.
+pub fn router(_state: AppState, _env: ()) -> Router {
+    router_inner(_state)
+}
+
+fn router_inner(state: AppState) -> Router {
     Router::new()
         .route("/api/health", get(health))
         .route("/api/tariffs", get(list_tariffs))
@@ -488,7 +532,7 @@ pub struct ApiError {
 }
 
 impl ApiError {
-    fn bad_request(message: impl Into<String>) -> Self {
+    pub fn bad_request(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::BAD_REQUEST,
             code: "bad_request",
@@ -496,7 +540,7 @@ impl ApiError {
         }
     }
 
-    fn unprocessable(message: impl Into<String>) -> Self {
+    pub fn unprocessable(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::UNPROCESSABLE_ENTITY,
             code: "invalid_input",
@@ -504,7 +548,7 @@ impl ApiError {
         }
     }
 
-    fn not_found(message: impl Into<String>) -> Self {
+    pub fn not_found(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::NOT_FOUND,
             code: "not_found",
@@ -512,7 +556,18 @@ impl ApiError {
         }
     }
 
-    fn from_solve(e: tide_core::solver::ScheduleSolveError) -> Self {
+    /// The JSON body of this error, so a caller outside axum can render it.
+    pub fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "error": {
+                "code": self.code,
+                "message": self.message,
+                "api_version": API_VERSION,
+            }
+        })
+    }
+
+    pub fn from_solve(e: tide_core::solver::ScheduleSolveError) -> Self {
         match e {
             tide_core::solver::ScheduleSolveError::Scenario(faults) => Self::unprocessable(
                 faults
@@ -566,6 +621,10 @@ impl IntoResponse for ApiError {
 /// target type: ...` as plain text, which breaks the contract that every error
 /// carries a stable machine-readable `code`. A client — or a test — should never
 /// have to parse prose to learn what went wrong.
+pub fn from_json_rejection(err: axum::extract::rejection::JsonRejection) -> ApiError {
+    json_rejection(err)
+}
+
 fn json_rejection(err: axum::extract::rejection::JsonRejection) -> ApiError {
     let status = err.status();
     let code: &'static str = match &err {
@@ -635,7 +694,7 @@ struct PriceRequest {
 }
 
 #[derive(Debug, Deserialize)]
-struct GridRequest {
+pub(crate) struct GridRequest {
     start_epoch_minutes: i64,
     slot_minutes: u16,
     slots: u32,
@@ -795,6 +854,135 @@ async fn usage_import(request: axum::extract::Request) -> Response {
         }
         Err(e) => ApiError::unprocessable(e.to_string()).into_response(),
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HistoryImportRequest {
+    pub(crate) grid: GridRequest,
+    pub csv: String,
+    pub unit: tide_core::usage::EnergyUnit,
+    pub interval_minutes: u16,
+}
+
+#[derive(Debug, Serialize)]
+pub struct HistoryImportResponse {
+    pub imported: usize,
+    pub inserted: usize,
+    pub intervals_already_stored: bool,
+    pub summary: tide_core::history::PeriodSummary,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HistoryCompareRequest {
+    pub from_epoch_minutes: i64,
+    pub to_epoch_minutes: i64,
+    pub current_tariff_id: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct HistoryCompareResponse {
+    pub summary: tide_core::history::PeriodSummary,
+    pub ranked: Vec<tide_core::history::TariffComparison>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct HistoryBillsResponse {
+    pub bills: Vec<StoredBill>,
+}
+
+/// Store a usage series durably, then report what is stored.
+///
+/// Idempotent by construction: re-importing the same export inserts nothing,
+/// because the unique key is the interval's start time and length.
+/// Store a usage series durably, then report what is stored.
+///
+/// Idempotent by construction: re-importing the same export inserts nothing,
+/// because the unique key is the interval's start time and length.
+///
+/// This is a plain async function rather than an axum handler because D1's
+/// futures are not `Send`, and axum's `Handler` requires `Send`. The worker owns
+/// the datastore and calls in, which keeps the arithmetic here and testable.
+pub async fn history_import(
+    store: &dyn Store,
+    req: HistoryImportRequest,
+) -> Result<HistoryImportResponse, ApiError> {
+    let grid = resolve_grid(&req.grid)?;
+
+    match tide_core::usage::read_csv(&req.csv, req.unit, req.interval_minutes, &grid) {
+        Ok(import) => {
+            let per_slot =
+                (i64::from(grid.slot_minutes) / i64::from(req.interval_minutes.max(1))).max(1);
+            let step = i64::from(req.interval_minutes.max(1));
+            let mut readings: Vec<tide_core::history::Reading> = Vec::new();
+            for (slot, wh) in import.import_wh.iter().enumerate() {
+                if *wh == 0 {
+                    continue;
+                }
+                let start = grid.slot_start(slot as u32);
+                let energy = u128::from(*wh);
+                let share = energy / per_slot as u128;
+                for part in 0..per_slot {
+                    let is_last = part + 1 == per_slot;
+                    let value = if is_last {
+                        energy.saturating_sub(share * (per_slot as u128 - 1))
+                    } else {
+                        share
+                    };
+                    if value == 0 {
+                        continue;
+                    }
+                    readings.push(tide_core::history::Reading {
+                        start_epoch_minutes: start + part * step,
+                        interval_minutes: req.interval_minutes,
+                        import_wh: u64::try_from(value).unwrap_or(u64::MAX),
+                        export_wh: 0,
+                    });
+                }
+            }
+
+            let inserted = store
+                .insert_readings(&readings)
+                .await
+                .map_err(ApiError::unprocessable)?;
+            let total = store
+                .readings_between(grid.start_epoch_minutes, i64::MAX)
+                .await
+                .map_err(ApiError::unprocessable)?;
+            let summary = tide_core::history::summarise(&total);
+            Ok(HistoryImportResponse {
+                imported: readings.len(),
+                inserted,
+                intervals_already_stored: inserted < readings.len(),
+                summary,
+            })
+        }
+        Err(e) => Err(ApiError::unprocessable(e.to_string())),
+    }
+}
+
+/// Rank every bundled tariff over a stored period.
+pub async fn history_compare(
+    store: &dyn Store,
+    tariffs: &[Tariff],
+    req: HistoryCompareRequest,
+) -> Result<HistoryCompareResponse, ApiError> {
+    let readings = store
+        .readings_between(req.from_epoch_minutes, req.to_epoch_minutes)
+        .await
+        .map_err(ApiError::unprocessable)?;
+    let refs: Vec<&Tariff> = tariffs.iter().collect();
+    let ranked = tide_core::history::compare(&readings, &refs, req.current_tariff_id.as_deref());
+    let summary = tide_core::history::summarise(&readings);
+    Ok(HistoryCompareResponse { summary, ranked })
+}
+
+/// Bills already stored, newest first.
+pub async fn history_bills(store: &dyn Store) -> Result<HistoryBillsResponse, ApiError> {
+    let bills = store
+        .recent_bills(20)
+        .await
+        .map_err(ApiError::unprocessable)?;
+    Ok(HistoryBillsResponse { bills })
 }
 
 #[derive(Debug, Deserialize)]

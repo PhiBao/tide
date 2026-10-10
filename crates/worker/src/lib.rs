@@ -24,5 +24,5 @@ pub async fn fetch(
     _env: Env,
     _ctx: Context,
 ) -> Result<http::Response<axum::body::Body>> {
-    Ok(router(AppState::new()).call(req).await?)
+    Ok(router(AppState::new(), ()).call(req).await?)
 }
