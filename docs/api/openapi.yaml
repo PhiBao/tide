@@ -1,0 +1,685 @@
+openapi: 3.0.3
+info:
+  title: Tide API
+  version: "1"
+  description: |
+    A composer for time-varying cost. Every endpoint is a pure function of its
+    request: no session, no database, no clock. That is what lets the same
+    arithmetic be asserted exactly, and it is why the optimiser can carry its own
+    proof.
+
+    Amounts are micro-dollars (1e-6 USD), energies are watt-hours, powers are
+    watts, and instants are epoch minutes since 1970-01-01T00:00Z. There are no
+    floating point values anywhere in the contract.
+  contact:
+    name: Tide
+    url: https://github.com/PhiBao/tide
+
+servers:
+  - url: https://tide.kiter0211.workers.dev
+    description: Production
+
+tags:
+  - name: meta
+    description: Liveness and the tariff catalogue
+  - name: prices
+    description: The priced horizon
+  - name: solve
+    description: The optimiser and its proof
+
+paths:
+  /api/health:
+    get:
+      tags: [meta]
+      summary: Liveness
+      operationId: getHealth
+      responses:
+        "200":
+          description: The service is up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /api/tariffs:
+    get:
+      tags: [meta]
+      summary: List the bundled tariffs
+      operationId: listTariffs
+      responses:
+        "200":
+          description: Every bundled tariff, with the source its numbers came from
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TariffList"
+
+  /api/tariffs/{id}:
+    get:
+      tags: [meta]
+      summary: Fetch one tariff in full
+      operationId: getTariff
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: overnight-ev
+      responses:
+        "200":
+          description: The tariff, including its time zone and every rate period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tariff"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/prices:
+    post:
+      tags: [prices]
+      summary: The weighted price of every slot in a grid
+      operationId: getPrices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PriceRequest"
+      responses:
+        "200":
+          description: One entry per slot, with the exact integer the optimiser minimises
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/InvalidInput"
+
+  /api/horizon:
+    post:
+      tags: [prices]
+      summary: A horizon starting at the tariff's own midnight
+      description: |
+        Anchors the grid at midnight **in the tariff's zone**, so a viewer
+        anywhere in the world sees a chart whose axis labels agree with the prices
+        it shows. The client passes only `now_minutes`, which carries no timezone
+        semantics of its own.
+      operationId: getHorizon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HorizonRequest"
+      responses:
+        "200":
+          description: The grid and its price series
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/InvalidInput"
+
+  /api/solve:
+    post:
+      tags: [solve]
+      summary: Place loads into the cheapest lawful windows
+      description: |
+        Returns the schedule, its exact cost, and a certificate: when the cost
+        equals the relaxation lower bound the schedule is provably the global
+        optimum, not merely the best the optimiser found.
+      operationId: solveScenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolveRequest"
+      responses:
+        "200":
+          description: The schedule, its certificate, and the household's baseline for comparison
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolveResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/InvalidInput"
+
+  /api/solve/verify:
+    post:
+      tags: [solve]
+      summary: Prove the answer against a brute-force oracle
+      description: |
+        Re-derives the optimum by exhaustive enumeration and reports either an
+        exact match or admits the instance was too large to enumerate. It never
+        invents an optimum.
+      operationId: verifyScenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolveRequest"
+              properties:
+                oracle_node_budget:
+                  type: integer
+                  format: int64
+                  minimum: 1
+                  description: Ceiling on how many nodes the oracle may explore
+      responses:
+        "200":
+          description: The solver's answer against the oracle's
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/InvalidInput"
+
+  /api/bills:
+    post:
+      tags: [solve]
+      summary: A line-item bill over a usage series
+      description: |
+        Energy is attributed across the rate periods each slot spans, weighted by
+        minutes, so the lines always sum exactly to the total. Computing a bill
+        over a solved schedule's usage yields the same integer the optimiser
+        reported.
+      operationId: computeBill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillRequest"
+      responses:
+        "200":
+          description: The bill, with a justification for every line
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/InvalidInput"
+
+components:
+  responses:
+    NotFound:
+      description: No such tariff, or no such route
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    InvalidInput:
+      description: The input is unusable. A 422 always means the request is at fault, never the service.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+  schemas:
+    Health:
+      type: object
+      required: [status, api_version, service]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        api_version:
+          type: integer
+        service:
+          type: string
+
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Stable machine-readable code
+            message:
+              type: string
+              description: Human-readable explanation
+            api_version:
+              type: integer
+
+    TariffSummary:
+      type: object
+      required: [id, name, zone, periods]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        zone:
+          type: string
+        periods:
+          type: integer
+        source_url:
+          type: [string, "null"]
+        source_retrieved:
+          type: [string, "null"]
+
+    TariffList:
+      type: object
+      required: [tariffs]
+      properties:
+        tariffs:
+          type: array
+          items:
+            $ref: "#/components/schemas/TariffSummary"
+
+    Tariff:
+      type: object
+      required: [id, name, zone, periods, fixed_charges, source_url, source_retrieved]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        zone:
+          $ref: "#/components/schemas/LocalZone"
+        periods:
+          type: array
+          items:
+            $ref: "#/components/schemas/RatePeriod"
+        fixed_charges:
+          type: array
+          items:
+            $ref: "#/components/schemas/FixedCharge"
+        export_credit:
+          oneOf:
+            - $ref: "#/components/schemas/ExportCredit"
+            - type: "null"
+        source_url:
+          type: [string, "null"]
+        source_retrieved:
+          type: [string, "null"]
+
+    LocalZone:
+      type: object
+      required: [name, standard_offset_minutes]
+      properties:
+        name:
+          type: string
+        standard_offset_minutes:
+          type: integer
+          description: Minutes east of UTC
+        dst:
+          oneOf:
+            - $ref: "#/components/schemas/DstRule"
+            - type: "null"
+
+    DstRule:
+      type: object
+      required: [start, end, extra_offset_minutes, start_convention, end_convention]
+      properties:
+        start:
+          $ref: "#/components/schemas/Transition"
+        end:
+          $ref: "#/components/schemas/Transition"
+        extra_offset_minutes:
+          type: integer
+        start_convention:
+          type: string
+          enum: [LocalStandard, LocalDaylight, Utc]
+        end_convention:
+          type: string
+          enum: [LocalStandard, LocalDaylight, Utc]
+
+    Transition:
+      type: object
+      required: [month, week, weekday, time_of_day_minutes]
+      properties:
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        week:
+          type: string
+          enum: [First, Second, Third, Fourth, Last]
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: 0 = Sunday
+        time_of_day_minutes:
+          type: integer
+
+    RatePeriod:
+      type: object
+      required: [id, label, days, start_minute, end_minute, months, price]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        days:
+          type: string
+          enum: [EveryDay, Weekdays, Weekends, WeekdayMask]
+        start_minute:
+          type: integer
+          description: Minutes since local midnight; may exceed end_minute to cross midnight
+        end_minute:
+          type: integer
+        months:
+          type: integer
+          description: Bitmask of months, bit 0 = January; 0 means every month
+        price:
+          type: integer
+          description: Micro-USD per kWh
+
+    FixedCharge:
+      type: object
+      required: [label, amount, per_days]
+      properties:
+        label:
+          type: string
+        amount:
+          type: integer
+          description: Micro-USD
+        per_days:
+          type: integer
+
+    ExportCredit:
+      type: object
+      required: [label, rate_per_kwh]
+      properties:
+        label:
+          type: string
+        rate_per_kwh:
+          type: integer
+          description: Micro-USD per kWh
+
+    Grid:
+      type: object
+      required: [start_epoch_minutes, slot_minutes, slots]
+      properties:
+        start_epoch_minutes:
+          type: integer
+          format: int64
+        slot_minutes:
+          type: integer
+          enum: [5, 10, 15, 20, 30, 60]
+          description: Must divide an hour
+        slots:
+          type: integer
+          minimum: 1
+          maximum: 16384
+
+    Load:
+      type: object
+      required: [id, label, energy_wh, max_power_w, deadline_slot, earliest_slot, prefer_contiguous, natural_start_slot]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        energy_wh:
+          type: integer
+          format: int64
+          description: Watt-hours the load must receive
+        max_power_w:
+          type: integer
+          format: int32
+        deadline_slot:
+          type: integer
+          format: int32
+          description: The load must be complete by the end of this slot
+        earliest_slot:
+          type: integer
+          format: int32
+        prefer_contiguous:
+          type: boolean
+        natural_start_slot:
+          type: integer
+          format: int32
+          description: Where the household would start it without planning; the baseline runs it here
+
+    Scenario:
+      type: object
+      required: [id, name, tariff_id, grid_start_epoch_minutes, slot_minutes, slots, site_cap_w, loads]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        tariff_id:
+          type: string
+        grid_start_epoch_minutes:
+          type: integer
+          format: int64
+        slot_minutes:
+          type: integer
+        slots:
+          type: integer
+        site_cap_w:
+          type: integer
+          format: int32
+          description: Instantaneous power ceiling; 0 means unlimited
+        loads:
+          type: array
+          items:
+            $ref: "#/components/schemas/Load"
+
+    PriceRequest:
+      type: object
+      required: [tariff_id, grid]
+      properties:
+        tariff_id:
+          type: string
+        grid:
+          $ref: "#/components/schemas/Grid"
+
+    HorizonRequest:
+      type: object
+      required: [tariff_id, slots, slot_minutes, now_minutes]
+      properties:
+        tariff_id:
+          type: string
+        slots:
+          type: integer
+        slot_minutes:
+          type: integer
+        now_minutes:
+          type: integer
+          format: int64
+          description: The current instant, as epoch minutes. Carries no timezone semantics.
+
+    SlotPrice:
+      type: object
+      required: [slot, start_epoch_minutes, mean_micro_usd_per_kwh, weighted_price]
+      properties:
+        slot:
+          type: integer
+        start_epoch_minutes:
+          type: integer
+          format: int64
+        mean_micro_usd_per_kwh:
+          type: integer
+          description: Display only; never used in arithmetic
+        weighted_price:
+          type: integer
+          format: int64
+          description: The exact integer the optimiser minimises, in micro-USD/kWh·minute
+
+    PriceResponse:
+      type: object
+      required: [slot_minutes, start_epoch_minutes, slots]
+      properties:
+        slot_minutes:
+          type: integer
+        start_epoch_minutes:
+          type: integer
+          format: int64
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/SlotPrice"
+
+    SolveRequest:
+      type: object
+      required: [tariff_id, scenario]
+      properties:
+        tariff_id:
+          type: string
+        scenario:
+          $ref: "#/components/schemas/Scenario"
+        oracle_node_budget:
+          type: integer
+          format: int64
+
+    Placement:
+      type: object
+      required: [load, slots, watts, delivered_wh, unmet, contiguous]
+      properties:
+        load:
+          type: string
+        slots:
+          type: array
+          items:
+            type: integer
+        watts:
+          type: array
+          items:
+            type: integer
+          description: Parallel to slots; the last slot often runs at reduced power
+        delivered_wh:
+          type: integer
+          format: int64
+        unmet:
+          type: boolean
+        contiguous:
+          type: boolean
+
+    SolveResponse:
+      type: object
+      required: [schedule, optimality, lower_bound_micro_usd, gap_percent_x1000, baseline_cost_micro_usd, baseline_placements, diagnostics]
+      properties:
+        schedule:
+          type: object
+          required: [placements, site_draw_w, cost_micro_usd]
+          properties:
+            placements:
+              type: array
+              items:
+                $ref: "#/components/schemas/Placement"
+            site_draw_w:
+              type: array
+              items:
+                type: integer
+            cost_micro_usd:
+              type: integer
+              format: int64
+        optimality:
+          type: string
+          enum: [Proved, Heuristic]
+        lower_bound_micro_usd:
+          type: integer
+          format: int64
+        gap_percent_x1000:
+          type: integer
+          format: int64
+        baseline_cost_micro_usd:
+          type: integer
+          format: int64
+        baseline_placements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Placement"
+        diagnostics:
+          type: array
+          items:
+            type: string
+
+    VerifyResponse:
+      type: object
+      required: [solver_cost_micro_usd, optimal_cost_micro_usd, is_optimal, badge, enumerated, nodes_explored]
+      properties:
+        solver_cost_micro_usd:
+          type: integer
+          format: int64
+        optimal_cost_micro_usd:
+          type: [integer, "null"]
+          format: int64
+          description: null when the oracle could not enumerate the instance
+        is_optimal:
+          type: boolean
+        badge:
+          type: string
+        enumerated:
+          type: boolean
+        nodes_explored:
+          type: integer
+          format: int64
+
+    BillRequest:
+      type: object
+      required: [tariff_id, grid, import_wh, export_wh]
+      properties:
+        tariff_id:
+          type: string
+        grid:
+          $ref: "#/components/schemas/Grid"
+        import_wh:
+          type: array
+          items:
+            type: integer
+            format: int64
+        export_wh:
+          type: array
+          items:
+            type: integer
+            format: int64
+
+    BillLine:
+      type: object
+      required: [label, energy_wh, rate_micro_usd_per_kwh, amount_micro_usd, detail]
+      properties:
+        label:
+          type: string
+        energy_wh:
+          type: integer
+          format: int64
+        rate_micro_usd_per_kwh:
+          type: [integer, "null"]
+          format: int32
+          description: null for fixed and demand charges
+        amount_micro_usd:
+          type: integer
+          format: int64
+          description: Negative for export credits
+        detail:
+          type: string
+          description: The rule that produced this line
+
+    BillResponse:
+      type: object
+      required: [total_micro_usd, lines]
+      properties:
+        total_micro_usd:
+          type: integer
+          format: int64
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillLine"
+
+security: []
