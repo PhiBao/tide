@@ -200,12 +200,10 @@ pub fn read_csv(
 
         // Time: either a timestamp column or implicit sequencing.
         let row_start = match columns.time {
-            Some(t) => {
-                parse_timestamp(fields[t]).ok_or_else(|| ImportError::BadTimestamp {
-                    line,
-                    text: fields[t].to_string(),
-                })?
-            }
+            Some(t) => parse_timestamp(fields[t]).ok_or_else(|| ImportError::BadTimestamp {
+                line,
+                text: fields[t].to_string(),
+            })?,
             None => match first_row_start {
                 None => grid.start_epoch_minutes,
                 Some(start) => {
