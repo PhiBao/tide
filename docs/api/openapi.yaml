@@ -3,10 +3,16 @@ info:
   title: Tide API
   version: "1"
   description: |
-    A composer for time-varying cost. Every endpoint is a pure function of its
-    request: no session, no database, no clock. That is what lets the same
-    arithmetic be asserted exactly, and it is why the optimiser can carry its own
-    proof.
+    A composer for time-varying cost. The arithmetic endpoints are pure
+    functions of their request: no session, no database, no clock. That is what
+    lets the same arithmetic be asserted exactly, and it is why the optimiser
+    can carry its own proof.
+
+    The `/api/history/*` endpoints are the exception: they persist an import so
+    a whole period can be compared across tariffs. Each caller's history lives
+    in its own partition, carried by the `tide_session` cookie — or by the
+    `X-Tide-Session` header for callers that cannot hold a cookie — and can be
+    removed again with `DELETE /api/history/session`.
 
     Amounts are micro-dollars (1e-6 USD), energies are watt-hours, powers are
     watts, and instants are epoch minutes since 1970-01-01T00:00Z. There are no
@@ -225,9 +231,13 @@ paths:
       summary: Store a usage export durably
       description: |
         Persists an interval export so a whole period can be compared across
-        tariffs. Idempotent: the unique key is the interval's start time and
-        length, so re-importing the same export stores nothing twice.
+        tariffs. Idempotent within the caller's own session: the unique key is
+        the interval's start time and length in that partition, so re-importing
+        the same export stores nothing twice.
       operationId: historyImport
+      parameters:
+        - $ref: "#/components/parameters/TideSessionCookie"
+        - $ref: "#/components/parameters/TideSessionHeader"
       requestBody:
         required: true
         content:
@@ -260,8 +270,11 @@ paths:
         The question this exists to answer: which tariff should I be on? Returns
         every bundled tariff ranked by total cost over the stored readings,
         cheapest first, with deltas against both the cheapest and the current
-        tariff.
+        tariff. Only the caller's own stored readings are used.
       operationId: historyCompare
+      parameters:
+        - $ref: "#/components/parameters/TideSessionCookie"
+        - $ref: "#/components/parameters/TideSessionHeader"
       requestBody:
         required: true
         content:
@@ -288,10 +301,42 @@ paths:
     get:
       tags: [solve]
       summary: Bills already stored
+      description: |
+        The caller's own stored bills, newest first. Another session's bills are
+        never returned.
       operationId: historyBills
+      parameters:
+        - $ref: "#/components/parameters/TideSessionCookie"
+        - $ref: "#/components/parameters/TideSessionHeader"
       responses:
         "200":
-          description: Stored bills, newest first
+          description: The caller's stored bills, newest first
+
+  /api/history/session:
+    delete:
+      tags: [solve]
+      summary: Delete the caller's stored history
+      description: |
+        Clears every reading and bill in the caller's own partition and reports
+        how many rows were removed. Other sessions are untouched. This is the
+        "clear my data" affordance, and how an automated test cleans up after
+        itself.
+      operationId: historyClearSession
+      parameters:
+        - $ref: "#/components/parameters/TideSessionCookie"
+        - $ref: "#/components/parameters/TideSessionHeader"
+      responses:
+        "200":
+          description: The number of rows removed from this session
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [removed]
+                properties:
+                  removed:
+                    type: integer
+                    description: Readings and bills deleted, summed across tables
 
   /api/bills:
     post:
@@ -322,6 +367,30 @@ paths:
           $ref: "#/components/responses/InvalidInput"
 
 components:
+  parameters:
+    TideSessionCookie:
+      name: tide_session
+      in: cookie
+      required: false
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{8,64}$'
+      description: |
+        The caller's history partition. Minted by the worker when absent or
+        malformed and set on the response. It decides only which bucket this
+        caller reads and writes — it is a partition key, not a credential.
+    TideSessionHeader:
+      name: X-Tide-Session
+      in: header
+      required: false
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{8,64}$'
+      description: |
+        An explicit partition override for callers that cannot hold a cookie,
+        such as an automated test. Takes precedence over the cookie. This is
+        not authentication: anyone may present any valid id.
+
   responses:
     NotFound:
       description: No such tariff, or no such route

@@ -19,6 +19,8 @@ import {
   rate,
   usd,
   type BillResponse,
+  type PeriodSummary,
+  type RankedTariff,
   type Grid,
   type Placement,
   type Scenario,
@@ -79,6 +81,15 @@ export default function Home() {
   } | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageError, setUsageError] = useState<string | null>(null);
+
+  // History: what has been stored durably, and how each tariff scores over it.
+  const [history, setHistory] = useState<{
+    summary: PeriodSummary;
+    ranked: RankedTariff[];
+  } | null>(null);
+  const [historyBusy, setHistoryBusy] = useState(false);
+  const [historyNote, setHistoryNote] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -265,6 +276,56 @@ export default function Home() {
       setUsageLoading(false);
     }
   }, [tariffId, horizon, usageCsv, usageUnit, usageInterval]);
+
+  /** Store the pasted export, then refresh the ranking. */
+  const storeMyUsage = useCallback(async () => {
+    if (!horizon || usageCsv.trim().length === 0) return;
+    setHistoryBusy(true);
+    setHistoryError(null);
+    try {
+      const result = await api.historyImport(usageCsv, usageUnit, usageInterval, horizon.start);
+      setHistoryNote(
+        result.intervals_already_stored
+          ? `${result.imported} intervals read; ${result.imported - result.inserted} were already stored, so nothing was duplicated.`
+          : `${result.inserted} intervals stored.`,
+      );
+      const ranked = await api.historyCompare(tariffId);
+      setHistory(ranked);
+    } catch (e) {
+      setHistoryError(e instanceof ApiError ? `${e.code}: ${e.message}` : String(e));
+      setHistory(null);
+    } finally {
+      setHistoryBusy(false);
+    }
+  }, [horizon, usageCsv, usageUnit, usageInterval, tariffId]);
+
+  /** Rank every tariff over what is already stored. */
+  const rankTariffs = useCallback(async () => {
+    setHistoryBusy(true);
+    setHistoryError(null);
+    try {
+      setHistory(await api.historyCompare(tariffId));
+      setHistoryNote(null);
+    } catch (e) {
+      setHistoryError(e instanceof ApiError ? `${e.code}: ${e.message}` : String(e));
+      setHistory(null);
+    } finally {
+      setHistoryBusy(false);
+    }
+  }, [tariffId]);
+
+  const forgetMyUsage = useCallback(async () => {
+    setHistoryBusy(true);
+    try {
+      const { removed } = await api.historyClear();
+      setHistory(null);
+      setHistoryNote(`Removed ${removed} stored interval${removed === 1 ? "" : "s"}.`);
+    } catch (e) {
+      setHistoryError(e instanceof ApiError ? `${e.code}: ${e.message}` : String(e));
+    } finally {
+      setHistoryBusy(false);
+    }
+  }, []);
 
   const ribbonLoads: RibbonLoad[] = useMemo(
     () =>
@@ -539,6 +600,89 @@ export default function Home() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ---------------------------------------------------------------- */}
+      <h2 className="rule-label">Which tariff should you be on?</h2>
+      <p className="panel-note">
+        Store an export and every bundled tariff is priced against it, cheapest
+        first. Exact integer arithmetic, so the ranking is reproducible rather
+        than approximate. Your readings are kept against this browser only, and
+        you can remove them.
+      </p>
+
+      <div className="usage-buttons" style={{ marginBottom: 14 }}>
+        <button
+          type="button"
+          className="primary"
+          onClick={() => void storeMyUsage()}
+          disabled={historyBusy || usageCsv.trim().length === 0 || !horizon}
+        >
+          {historyBusy ? "Working…" : "Store and rank"}
+        </button>
+        <button type="button" onClick={() => void rankTariffs()} disabled={historyBusy}>
+          Re-rank stored
+        </button>
+        <button type="button" onClick={() => void forgetMyUsage()} disabled={historyBusy}>
+          Forget my data
+        </button>
+      </div>
+
+      {historyError && (
+        <pre className="state error" style={{ marginBottom: 12 }}>{historyError}</pre>
+      )}
+
+      {historyNote && <p className="panel-note">{historyNote}</p>}
+
+      {history && history.summary.intervals === 0 && (
+        <p className="panel-note">
+          Nothing stored yet. Paste an export above and press “Store and rank”.
+        </p>
+      )}
+
+      {history && history.summary.intervals > 0 && (
+        <>
+          <div className="ranked">
+            {history.ranked.map((entry, i) => {
+              const cheapest = i === 0;
+              const isCurrent = entry.tariff_id === tariffId;
+              return (
+                <div className={`ranked-row${cheapest ? " cheapest" : ""}`} key={entry.tariff_id}>
+                  <div className="ranked-name">
+                    {cheapest && <span className="ranked-badge">cheapest</span>}
+                    <strong>{entry.tariff_name}</strong>
+                    <small>{entry.tariff_id}</small>
+                  </div>
+                  <div className="ranked-cost">
+                    <div>{usd(entry.total_micro_usd)}</div>
+                    <small>
+                      {cheapest
+                        ? "the floor for this period"
+                        : `+${usd(entry.delta_vs_cheapest_micro_usd)} more`}
+                    </small>
+                  </div>
+                  <div className="ranked-now">
+                    {isCurrent ? (
+                      <span className="ranked-current">you are on this</span>
+                    ) : (
+                      <small>
+                        {entry.delta_vs_current_micro_usd !== null &&
+                          `${
+                            entry.delta_vs_current_micro_usd > 0 ? "costs" : "saves"
+                          } ${usd(Math.abs(entry.delta_vs_current_micro_usd))}`}
+                      </small>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="panel-note" style={{ marginTop: 12 }}>
+            {history.summary.intervals} intervals · {kwh(history.summary.total_import_wh)} ·{" "}
+            {history.summary.days_covered} day{history.summary.days_covered === 1 ? "" : "s"} ·
+            mean {kwh(history.summary.mean_import_wh)} per interval
+          </p>
+        </>
       )}
 
       {/* ---------------------------------------------------------------- */}

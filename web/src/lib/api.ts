@@ -119,6 +119,34 @@ export interface BillResponse {
   lines: BillLine[];
 }
 
+/** What a set of stored readings covers. */
+export interface PeriodSummary {
+  from_epoch_minutes: number | null;
+  to_epoch_minutes: number | null;
+  intervals: number;
+  total_import_wh: number;
+  total_export_wh: number;
+  days_covered: number;
+  mean_import_wh: number;
+}
+
+/** One tariff's cost over a stored period, ranked against the others. */
+export interface RankedTariff {
+  tariff_id: string;
+  tariff_name: string;
+  total_import_wh: number;
+  total_micro_usd: number;
+  delta_vs_cheapest_micro_usd: number;
+  delta_vs_current_micro_usd: number | null;
+  lines: Array<{
+    label: string;
+    energy_wh: number;
+    rate_micro_usd_per_kwh: number | null;
+    amount_micro_usd: number;
+    detail: string;
+  }>;
+}
+
 export interface TariffSummary {
   id: string;
   name: string;
@@ -244,6 +272,42 @@ export const api = {
         interval_minutes: intervalMinutes,
       }),
     }),
+
+  /**
+   * Store a usage export durably, so a whole period can be compared across
+   * tariffs later. Idempotent: re-importing the same export stores nothing
+   * twice, because the unique key is the interval's start time and length.
+   */
+  historyImport: (csv: string, unit: "wh" | "kwh", intervalMinutes: number, startEpochMinutes: number) =>
+    request<{
+      imported: number;
+      inserted: number;
+      intervals_already_stored: boolean;
+      summary: PeriodSummary;
+    }>("/api/history/import", {
+      method: "POST",
+      body: JSON.stringify({
+        grid: { start_epoch_minutes: startEpochMinutes, slot_minutes: 15, slots: 96 },
+        csv,
+        unit,
+        interval_minutes: intervalMinutes,
+      }),
+    }),
+
+  /** Rank every bundled tariff over what is stored, cheapest first. */
+  historyCompare: (currentTariffId?: string) =>
+    request<{ summary: PeriodSummary; ranked: RankedTariff[] }>("/api/history/compare", {
+      method: "POST",
+      body: JSON.stringify({
+        from_epoch_minutes: 0,
+        to_epoch_minutes: 9_999_999_999,
+        current_tariff_id: currentTariffId ?? null,
+      }),
+    }),
+
+  /** Remove everything stored for this browser session. */
+  historyClear: () =>
+    request<{ removed: number }>("/api/history/session", { method: "DELETE" }),
 
   verify: (tariffId: string, scenario: Scenario, nodeBudget?: number) =>
     request<{

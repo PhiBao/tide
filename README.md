@@ -130,7 +130,7 @@ DNS-safe by construction and removes the guesswork.
 | Criterion | How Tide answers it |
 |---|---|
 | 40% Project Quality | A polished, deterministic app with deliberate loading, empty and error states; 85 Rust tests behind it (55 core unit, 14 solver integration, 16 HTTP). |
-| 40% Tests That Run Themselves | **50 tests, all green.** 32 UI tests gating every PR against that PR's own preview, plus 18 authored API tests asserting exact micro-dollar totals. Coverage spans all four tariffs, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, the empty state, mobile row layout, and every failure mode. |
+| 40% Tests That Run Themselves | **52 tests, all green.** 34 UI tests gating every PR against that PR's own preview, plus 18 authored API tests asserting exact micro-dollar totals. Coverage spans all four tariffs, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, the empty state, mobile row layout, and every failure mode. |
 | 20% Innovation | The proof-backed optimiser, the exact rate engine, and the per-PR preview architecture |
 | ∞ Engagement | Long-form write-ups, Discord and X participation |
 
@@ -271,7 +271,7 @@ What is real, what is a fixture, and what is not:
 | DST handling | **Real.** US and EU rules modelled explicitly, with the local-standard/local-daylight convention distinction the US requires. Covered by the zone tests. |
 | Bundled tariffs | **Real published rate structures**, with source URLs and retrieval dates recorded in the API response. Not live feeds — a tariff is a rate *shape*, and Tide's job is the arithmetic over it. |
 | Usage series | **Real, importable, and stored.** Paste a CSV export from your utility or smart meter: it is billed by the same engine, exactly, and the intervals are kept in D1 so a whole period can be compared across every tariff. Re-importing the same export stores it once. The bundled demonstration set is clearly labelled as a sample. |
-| Usage history | **Real.** `/api/history/import`, `/api/history/compare` and `/api/history/bills` persist readings and rank every bundled tariff over them, cheapest first, with deltas against both the cheapest and the current tariff. |
+| Usage history | **Real, visible, and per-visitor.** Store an export and every bundled tariff is priced against it, cheapest first, with deltas against both the cheapest and the tariff you are on. Each browser session has its own partition, so one visitor's readings are never mixed into another's, and "Forget my data" removes yours. |
 | Hardware integration | **Not implemented, and not claimed.** Tide produces the *decision*; it does not actuate a plug. See Limitations. |
 
 Every number in the UI is computed by the same integer arithmetic the tests

@@ -16,8 +16,13 @@ def test_every_tariff_is_ranked_and_the_cheapest_is_named_first():
     The ranking is an exact integer comparison over the same stored readings, so
     the order is reproducible and the deltas must agree with the totals.
     """
+    # One Session for every call: the cookie it holds is this run's partition,
+    # so other sessions' rows can never mix into the ranking. Made per
+    # invocation, so a retry starts clean even if a previous attempt failed
+    # before its cleanup ran.
+    s = requests.Session()
     now = 20736 * 1440 + 903
-    horizon = requests.post(
+    horizon = s.post(
         "VAR_{url}/api/horizon",
         json={"tariff_id": "flat", "slots": 96, "slot_minutes": 15, "now_minutes": now},
         headers=H, timeout=60,
@@ -38,7 +43,7 @@ def test_every_tariff_is_ranked_and_the_cheapest_is_named_first():
     csv = "timestamp,kwh\n" + "\n".join(
         f"{iso(start + i * 15)},{v}" for i, v in enumerate(profile)
     )
-    imported = requests.post(
+    imported = s.post(
         "VAR_{url}/api/history/import",
         json={"grid": {"start_epoch_minutes": start, "slot_minutes": 15, "slots": 96},
               "unit": "kwh", "interval_minutes": 15, "csv": csv},
@@ -46,7 +51,7 @@ def test_every_tariff_is_ranked_and_the_cheapest_is_named_first():
     )
     assert imported.status_code == 200, imported.text
 
-    r = requests.post(
+    r = s.post(
         "VAR_{url}/api/history/compare",
         json={"from_epoch_minutes": start, "to_epoch_minutes": start + 1440,
               "current_tariff_id": "flat"},
@@ -83,3 +88,9 @@ def test_every_tariff_is_ranked_and_the_cheapest_is_named_first():
         assert overnight["total_micro_usd"] < current["total_micro_usd"], (
             "a time-of-use tariff must beat flat rate on a load with a quiet night"
         )
+
+    # Leave nothing behind: 96 quarter-hour readings are this session's, not
+    # the store's.
+    cleared = s.delete("VAR_{url}/api/history/session", headers=H, timeout=60)
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["removed"] == 96, "cleanup must remove exactly what was imported"

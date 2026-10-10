@@ -46,31 +46,69 @@ pub struct AppState {
     tariffs: Arc<Vec<Tariff>>,
 }
 
+/// A browser session's partition of the store.
+///
+/// A newtype rather than a bare `String` so the session argument cannot be
+/// confused with a tariff id, a grid bound, or any other string in the same
+/// call. It is a partition key, not a credential.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SessionId(pub String);
+
+impl SessionId {
+    /// The name of the fallback bucket.
+    ///
+    /// Exposed as well as constructed because the worker's validator has to
+    /// treat this name as reserved: its length fails the general rule, which
+    /// would make the default bucket unreachable and its contents invisible.
+    #[must_use]
+    pub fn demo_name() -> &'static str {
+        "demo"
+    }
+
+    /// The bucket used when a caller presents no session, so the API keeps
+    /// working for a bare curl without silently sharing with everyone else.
+    #[must_use]
+    pub fn demo() -> Self {
+        Self(Self::demo_name().into())
+    }
+}
+
 /// The persistence surface the API needs.
 ///
 /// A trait rather than a concrete D1 type, so the router compiles and tests
 /// without a Cloudflare binding and an alternative store can be swapped in
-/// without touching the HTTP layer.
+/// without touching the HTTP layer. Every method is scoped to one
+/// [`SessionId`]: history is per-visitor, never a shared pile.
 #[async_trait::async_trait(?Send)]
 pub trait Store: Send + Sync {
     async fn insert_readings(
         &self,
+        session: &SessionId,
         readings: &[tide_core::history::Reading],
     ) -> Result<usize, String>;
     async fn readings_between(
         &self,
+        session: &SessionId,
         from: i64,
         to: i64,
     ) -> Result<Vec<tide_core::history::Reading>, String>;
     async fn record_bill(
         &self,
+        session: &SessionId,
         from: i64,
         to: i64,
         tariff_id: &str,
         total_micro_usd: i64,
         total_import_wh: u128,
     ) -> Result<(), String>;
-    async fn recent_bills(&self, limit: usize) -> Result<Vec<StoredBill>, String>;
+    async fn recent_bills(
+        &self,
+        session: &SessionId,
+        limit: usize,
+    ) -> Result<Vec<StoredBill>, String>;
+    /// Delete every row for this session from every table, and report how many
+    /// rows went away. The "clear my data" affordance.
+    async fn clear_session(&self, session: &SessionId) -> Result<usize, String>;
 }
 
 /// A bill already stored.
@@ -890,20 +928,24 @@ pub struct HistoryBillsResponse {
     pub bills: Vec<StoredBill>,
 }
 
+/// The `DELETE /api/history/session` response.
+#[derive(Debug, Serialize)]
+pub struct HistoryClearResponse {
+    pub removed: usize,
+}
+
 /// Store a usage series durably, then report what is stored.
 ///
 /// Idempotent by construction: re-importing the same export inserts nothing,
-/// because the unique key is the interval's start time and length.
-/// Store a usage series durably, then report what is stored.
-///
-/// Idempotent by construction: re-importing the same export inserts nothing,
-/// because the unique key is the interval's start time and length.
+/// because the unique key is the interval's start time and length *within the
+/// caller's session*.
 ///
 /// This is a plain async function rather than an axum handler because D1's
 /// futures are not `Send`, and axum's `Handler` requires `Send`. The worker owns
 /// the datastore and calls in, which keeps the arithmetic here and testable.
 pub async fn history_import(
     store: &dyn Store,
+    session: &SessionId,
     req: HistoryImportRequest,
 ) -> Result<HistoryImportResponse, ApiError> {
     let grid = resolve_grid(&req.grid)?;
@@ -941,11 +983,11 @@ pub async fn history_import(
             }
 
             let inserted = store
-                .insert_readings(&readings)
+                .insert_readings(session, &readings)
                 .await
                 .map_err(ApiError::unprocessable)?;
             let total = store
-                .readings_between(grid.start_epoch_minutes, i64::MAX)
+                .readings_between(session, grid.start_epoch_minutes, i64::MAX)
                 .await
                 .map_err(ApiError::unprocessable)?;
             let summary = tide_core::history::summarise(&total);
@@ -963,11 +1005,12 @@ pub async fn history_import(
 /// Rank every bundled tariff over a stored period.
 pub async fn history_compare(
     store: &dyn Store,
+    session: &SessionId,
     tariffs: &[Tariff],
     req: HistoryCompareRequest,
 ) -> Result<HistoryCompareResponse, ApiError> {
     let readings = store
-        .readings_between(req.from_epoch_minutes, req.to_epoch_minutes)
+        .readings_between(session, req.from_epoch_minutes, req.to_epoch_minutes)
         .await
         .map_err(ApiError::unprocessable)?;
     let refs: Vec<&Tariff> = tariffs.iter().collect();
@@ -977,12 +1020,28 @@ pub async fn history_compare(
 }
 
 /// Bills already stored, newest first.
-pub async fn history_bills(store: &dyn Store) -> Result<HistoryBillsResponse, ApiError> {
+pub async fn history_bills(
+    store: &dyn Store,
+    session: &SessionId,
+) -> Result<HistoryBillsResponse, ApiError> {
     let bills = store
-        .recent_bills(20)
+        .recent_bills(session, 20)
         .await
         .map_err(ApiError::unprocessable)?;
     Ok(HistoryBillsResponse { bills })
+}
+
+/// Delete the caller's own history. Returns how many rows went away, so the
+/// client can tell "cleared" from "there was nothing there".
+pub async fn history_clear(
+    store: &dyn Store,
+    session: &SessionId,
+) -> Result<HistoryClearResponse, ApiError> {
+    let removed = store
+        .clear_session(session)
+        .await
+        .map_err(ApiError::unprocessable)?;
+    Ok(HistoryClearResponse { removed })
 }
 
 #[derive(Debug, Deserialize)]

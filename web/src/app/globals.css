@@ -453,6 +453,95 @@ button:disabled {
 }
 
 /* ---------------------------------------------------------------------------
+   The tariff ranking
+   --------------------------------------------------------------------------- */
+
+.ranked {
+  border-top: 1px solid var(--hair);
+}
+
+.ranked-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 150px;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--hair);
+}
+
+/* The cheapest tariff is the answer to the question, so it gets the one
+   editorial accent the palette allows rather than merely being first. */
+.ranked-row.cheapest {
+  border-left: 3px solid var(--price-0);
+  padding-left: 12px;
+  margin-left: -15px;
+}
+
+.ranked-name {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-width: 0;
+}
+
+.ranked-name small {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.ranked-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--price-0);
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 1px 5px;
+  flex: none;
+}
+
+.ranked-cost {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.ranked-cost small,
+.ranked-now small {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.ranked-now {
+  text-align: right;
+}
+
+.ranked-current {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 760px) {
+  .ranked-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+  }
+
+  .ranked-cost,
+  .ranked-now {
+    text-align: left;
+  }
+
+  .ranked-now {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
    The two bills, side by side. Hairline table, every row expandable.
    --------------------------------------------------------------------------- */
 
