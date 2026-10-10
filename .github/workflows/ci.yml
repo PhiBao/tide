@@ -347,7 +347,7 @@ jobs:
             echo ""
             echo "Against $PRODUCTION_URL, after deployment."
             echo ""
-            echo "\`$passed / $total\` passed, \`$failed\` failed."
+            echo "**$passed / $total** passed, $failed failed."
             echo ""
             echo "This job is scoped to production on purpose. The per-PR gate is the"
             echo "TestSprite job, which tests the branch's own preview; --target-url is"
