@@ -164,7 +164,10 @@ possible at all.
 
 ## The suite, honestly
 
-52 tests: 34 browser, 18 API. 111 Rust tests behind them.
+52 tests: 34 browser, 18 API. 111 Rust tests behind them. The browser suite is
+split by what a pull request's own deployment can host: 31 gate every PR against
+that branch's build, and 3 that need a database run against the deployed app
+beside the API suite.
 
 The two halves carry different weight, for a reason I only learned by
 measuring it — see "I committed a test suite that had never run" below. The
@@ -232,9 +235,10 @@ CI runs that check *before* the suite runs, so a pull request that edits a test
 without sending the edit on fails at the check rather than reporting a green run
 about code that never executed.
 
-The check cost about eighty lines and fires on all four layers — API code, UI
-plans, UI code, and the structure of the binding itself. It found a second
-problem the moment I wrote it: one test existed only on the portal, so the
+The check is one file of about three hundred and fifty lines, and it fires on
+every layer the suite binds: the authored API code, the browser plans, and the
+structure of the binding itself across three suites. It found a second problem
+the moment I wrote it: one test existed only on the portal, so the
 repository was quietly missing part of the suite it claimed to carry. Nobody
 would have noticed. That is the point.
 
@@ -258,10 +262,10 @@ the browser suite still needs an agent before it can run at all, and the figure
 that matters is not the one that improved.
 
 In that first generation the other seventeen failed on selectors for elements
-that have never existed here. They looked for a textbox called `Load 4 label`. The app's loads
-are called `EV charger`, `Water heater` and `Dishwasher`, and there is no fourth.
-Several called `select_option("")` — selecting the option whose value is the
-empty string, which is to say, nothing.)
+that have never existed here. They looked for a textbox called `Load 4 label`.
+The app's loads are called `EV charger`, `Water heater` and `Dishwasher`, and
+there is no fourth. Several called `select_option("")` — selecting the option
+whose value is the empty string, which is to say, nothing.
 
 Those tests pass in CI because the agent working from the plan rewrites them on
 the way past. Every green browser run I had reported, I had read as *"the page
@@ -299,11 +303,13 @@ Both are printed in green. Only one of them is about your product.
 Fixing the drift gave me a gate I trusted. Then it went red on a pull request,
 and chasing that down produced the least flattering number in this document.
 
-I started with two confident explanations and both were wrong. First the store:
-the preview had no database, which was real, and fixing it did not help. Then
-contention: four browser tests at once against one cold isolate, while the app
-recalculates a certified optimiser on every click. I set it to two. The run came
-back 29 of 31 again.
+I started with two confident explanations. The first was real, and not the whole
+story: every preview had no database, because a Preview deployment does not carry
+the binding in `wrangler.toml`, and two tests blocked on it. Deploying an
+ordinary Worker instead of a Preview fixed that, and the failures that remained
+were different ones. So I tried the second: contention, four browser tests at
+once against one cold isolate while the app recalculates a certified optimiser on
+every click. I set it to two. The run came back 29 of 31 again.
 
 So I stopped guessing and re-ran the two failures on their own against the very
 same preview. **Both passed.**
@@ -316,7 +322,7 @@ That is what named it. Across three runs of the 31-test gate:
 | 2 | 29/31 | `Re-solve the schedule after changing loads`, `Increasing a load's energy re-solves the schedule` |
 | 3 | 29/31 | `A rejected usage import explains itself`, `Expanding a bill line reveals the rule that produced it` |
 
-Five failures out of ninety-three results -- about 5% -- across four different
+Five failures out of ninety-three results — about 5% — across four different
 tests. Read that carefully, because the obvious reading is wrong: it is not a 5%
 chance that any particular test fails. It is that roughly one result in twenty
 fails, and which one is not predictable.
@@ -331,7 +337,7 @@ changed" is a claim with a latency attached rather than a fact.
 
 A gate is worth the meaning of its red. A red that means *your branch broke
 something* gets fixed. A red that means *try again* teaches everyone to re-run
-until green, which is indistinguishable from having no gate -- except that it
+until green, which is indistinguishable from having no gate — except that it
 costs money and time, and it teaches you to distrust the runs that are honest.
 
 I did not fix this. It is recorded with its measurement, in the README's

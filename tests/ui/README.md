@@ -11,10 +11,20 @@ what they are responsible for, not by screen:
 | **The ranking** | Storing an export prices every tariff against it, the cheapest is called out, and storing twice does not double. |
 | **The edges** | A long label does not break the row, a zero-length load is refused, and the page survives a reload. |
 
-These tests are the per-pull-request gate. Every pull request gets its own
-preview deployment, and this suite runs against that preview before the branch
-can merge — so a regression is caught on the branch that caused it, not after it
-reaches production.
+Thirty-one of these tests are the per-pull-request gate. Every pull request gets
+its own deployment, and those 31 run against it before the branch can merge — so
+a regression is caught on the branch that caused it, not after it reaches
+production. The other three need a database, so they live in their own TestSprite
+project and run against the deployed app beside the API suite.
+
+**The gate is also flaky, at about 5% of results.** Three consecutive runs of the
+31 failed one or two tests each and never the same ones, and the two failures
+from one run both passed in isolation against the very same deployment. Lowering
+concurrency from 4 to 2 did not change it. Two plausible causes: the agent
+re-authors these tests as it runs them, so it is not the same program twice, and
+the app recalculates a certified optimiser on every interaction, so "the answer
+has changed" is a claim with a latency. Treat this half as a smoke alarm rather
+than a proof; the API suite is the half whose green means something.
 
 ## What is committed here, and what deliberately is not
 
