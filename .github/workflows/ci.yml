@@ -205,6 +205,13 @@ jobs:
         # deletes it afterwards, so concurrent PRs never collide and no
         # environment budget is consumed.
         #
+        # Concurrency 4 and a 900s budget, not 5 and 600s. A preview is a cold
+        # isolate: the first request to each of five concurrent tests pays the
+        # start-up cost, and at 600s one test timed out while two others were
+        # blocked on elements that had not hydrated. All three passed against
+        # production under the wider budget, so the tighter gate was measuring
+        # its own impatience rather than the branch.
+        #
         # Auto-heal is deliberately NOT disabled here. A frontend test is
         # executed by an agent against its plan, and the agent re-authors the
         # generated selectors when it finds them stale; 12 of these 34 tests cannot
@@ -221,8 +228,8 @@ jobs:
             --project "$PROJECT_ID" \
             --target-url "$PREVIEW_URL" \
             --wait \
-            --max-concurrency 5 \
-            --timeout 600 \
+            --max-concurrency 4 \
+            --timeout 900 \
             --output json \
             --report junit --report-file ./testsprite-junit.xml \
             --summary-file ./testsprite-summary.json \
