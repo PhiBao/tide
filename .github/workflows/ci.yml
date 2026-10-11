@@ -121,24 +121,18 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         working-directory: crates/worker
-        # A real deployment to a PR-scoped Worker name, not `wrangler preview`.
+        # A real deployment to a PR-scoped Worker name.
         #
-        # The Previews service builds a deployment that does not carry the D1
-        # binding from wrangler.toml, whatever the CLI is told -- `--ignore-defaults`
-        # and its successor `--ignore-base-config` are both accepted and neither
-        # changes it. The result was a preview that served the frontend and
-        # answered every /api/history/* request with "persistence is not
-        # configured for this deployment", so three browser tests blocked on
-        # every pull request and the gate could not go green at all.
+        # The browser tests that need a store are NOT here: a preview carries no
+        # D1 binding, so /api/history/* answers "persistence is not configured
+        # for this deployment" on every one. Those three live in their own
+        # TestSprite project and run against production, which is what this job
+        # is for. Everything left here is a test a preview can actually host.
         #
-        # `wrangler deploy --name pr-N-tide` produces the same URL shape with
-        # the bindings the config declares, because it is an ordinary Worker.
-        # It shares the production store, partitioned per browser session, which
-        # the API suite already does for the same documented reason.
-        #
-        # The URL is scraped rather than parsed from JSON: `wrangler deploy` has
-        # no --json output, and a regex over the human output survives the
-        # banner and progress lines that --json was introduced to dodge.
+        # The URL is scraped rather than parsed from JSON because `wrangler
+        # deploy` has no --json output. Each PR leaves one Worker behind
+        # (pr-N-tide); they are cheap and are removed when the PR is closed by
+        # hand. Worth automating, and not worth a step that can fail.
         run: |
           set -o pipefail
           name="pr-${{ github.event.pull_request.number }}-tide"
@@ -388,6 +382,19 @@ jobs:
             --summary-file ./api-summary.json \
             > api-result.json
           cat api-summary.json
+
+      - name: Run the storage browser suite against production
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+        # Production-scoped for the same reason the API suite is: a Preview
+        # deployment carries no D1 binding, so a preview cannot answer
+        # /api/history/* at all and these three tests would block there on every
+        # pull request. The id is not a secret -- it is in tests/suite.json.
+        run: |
+          set -o pipefail
+          testsprite test run --all \
+            --project a54cd337-26cc-49ad-b0bf-cc7df4380665 \
+            --wait --max-concurrency 3 --timeout 900
 
       - name: Summarise
         if: always()

@@ -163,11 +163,6 @@
           "plan": "plans/expanding-a-bill-line-reveals-the-rule-that-produced-it.json"
         },
         {
-          "test_id": "9f36398c-28fa-4bd0-9443-6d6862321820",
-          "name": "Importing usage produces an exact bill",
-          "plan": "plans/importing-usage-produces-an-exact-bill.json"
-        },
-        {
           "test_id": "0bb7aab0-b555-44f6-bdbe-2812e85329a0",
           "name": "Increase a load allocation",
           "plan": "plans/increase-a-load-allocation.json"
@@ -223,16 +218,6 @@
           "plan": "plans/start-from-the-overnight-tariff-and-confirm-the-optimized-re.json"
         },
         {
-          "test_id": "5184c520-b02c-4d7d-b6ea-ac76148c7642",
-          "name": "Storing the same usage twice does not double it",
-          "plan": "plans/storing-the-same-usage-twice-does-not-double-it.json"
-        },
-        {
-          "test_id": "ae605bf0-a723-45c5-b1ae-c0e93591f2dc",
-          "name": "Storing usage ranks every tariff and names the cheapest",
-          "plan": "plans/storing-usage-ranks-every-tariff-and-names-the-cheapest.json"
-        },
-        {
           "test_id": "6b23307d-e250-4961-942c-60f114740f34",
           "name": "Switch tariffs and re-run the scenario",
           "plan": "plans/switch-tariffs-and-re-run-the-scenario.json"
@@ -276,6 +261,31 @@
           "test_id": "e24e88a7-e5bd-4c11-a878-a886b9bd8cd6",
           "name": "View the default load inventory",
           "plan": "plans/view-the-default-load-inventory.json"
+        }
+      ]
+    },
+    {
+      "key": "storage",
+      "project_id": "a54cd337-26cc-49ad-b0bf-cc7df4380665",
+      "project_name": "Tide web - storage",
+      "dir": "tests/ui",
+      "kind": "plan",
+      "note": "Browser tests that need a store. Run against production, not a preview: a Preview deployment carries no D1 binding, which is the same reason the API suite is production-scoped.",
+      "tests": [
+        {
+          "test_id": "973dc8c2-e0c1-44b0-924c-3857e9879b25",
+          "name": "Importing usage produces an exact bill",
+          "plan": "plans/importing-usage-produces-an-exact-bill.json"
+        },
+        {
+          "test_id": "4b6db6fa-8e10-45b1-99ec-6a95578d54a8",
+          "name": "Storing the same usage twice does not double it",
+          "plan": "plans/storing-the-same-usage-twice-does-not-double-it.json"
+        },
+        {
+          "test_id": "6ded5504-59a2-48d2-b1e9-5918927ba411",
+          "name": "Storing usage ranks every tariff and names the cheapest",
+          "plan": "plans/storing-usage-ranks-every-tariff-and-names-the-cheapest.json"
         }
       ]
     }

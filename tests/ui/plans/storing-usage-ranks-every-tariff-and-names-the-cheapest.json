@@ -1,6 +1,6 @@
 {
   "name": "Storing usage ranks every tariff and names the cheapest",
-  "test_id": "ae605bf0-a723-45c5-b1ae-c0e93591f2dc",
+  "test_id": "6ded5504-59a2-48d2-b1e9-5918927ba411",
   "planSteps": [
     {
       "type": "action",

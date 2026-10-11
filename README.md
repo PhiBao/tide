@@ -349,16 +349,15 @@ assert on. There is no mock path anywhere in the codebase.
   multiplies one day's saving by thirty, and now says so rather than presenting
   the result as a bill you would receive. A real month has a different mix of
   days, and a different mix of weather.
-- **A pull request's preview has no database, so the store cannot be tested on
-  one.** Cloudflare's Preview deployments do not carry the D1 binding from
-  `wrangler.toml`, whatever the CLI is told, and the result is that
-  `/api/history/*` answers *"persistence is not configured for this
-  deployment"* on every preview. Three of the 34 browser tests need a store, so
-  the per-pull-request gate is red on them until the gate is scoped: the 31 a
-  preview can host should run against the preview, and those three should run
-  against production beside the API suite, for the same reason the API suite
-  already does. That is unfinished work, stated here rather than hidden, and it
-  is the one place where the gate does not yet hold.
+- **A pull request's preview has no database, so the store is tested against
+  production instead.** Cloudflare Preview deployments do not carry the D1
+  binding from `wrangler.toml`; the flag that looks like the fix is accepted and
+  changes nothing. So the three browser tests that need a store live in their own
+  TestSprite project and run against the deployed app, beside the API suite,
+  which is production-scoped for the same reason. The per-pull-request gate runs
+  the 31 a preview can host, and it holds: a branch cannot merge on a green it
+  did not earn. What a preview cannot do is catch a store regression *before*
+  merge, and that is the honest cost of the split.
 - **Aggregation is exact but unindexed.** `history_compare` reads every stored
   interval in the requested range and prices each tariff over all of them. That
   is fine for a year of one household and would want pre-aggregation before it
