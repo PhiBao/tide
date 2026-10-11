@@ -294,6 +294,51 @@ The lesson is not "don't trust your tests". It is narrower and more useful:
 "Passes" can mean "the product is correct", or "the test can be made to pass".
 Both are printed in green. Only one of them is about your product.
 
+## The gate is flaky, and that is worse than being red
+
+Fixing the drift gave me a gate I trusted. Then it went red on a pull request,
+and chasing that down produced the least flattering number in this document.
+
+I started with two confident explanations and both were wrong. First the store:
+the preview had no database, which was real, and fixing it did not help. Then
+contention: four browser tests at once against one cold isolate, while the app
+recalculates a certified optimiser on every click. I set it to two. The run came
+back 29 of 31 again.
+
+So I stopped guessing and re-ran the two failures on their own against the very
+same preview. **Both passed.**
+
+That is what named it. Across three runs of the 31-test gate:
+
+| Run | Result | What failed |
+|---|---|---|
+| 1 | 30/31 | one test |
+| 2 | 29/31 | `Re-solve the schedule after changing loads`, `Increasing a load's energy re-solves the schedule` |
+| 3 | 29/31 | `A rejected usage import explains itself`, `Expanding a bill line reveals the rule that produced it` |
+
+Five failures out of ninety-three results -- about 5% -- across four different
+tests. Read that carefully, because the obvious reading is wrong: it is not a 5%
+chance that any particular test fails. It is that roughly one result in twenty
+fails, and which one is not predictable.
+
+Two sources of nondeterminism, and one of them is mine by design. The browser
+tests are executed by an agent working from a plan, and the agent re-authors the
+selectors as it goes, so the suite is not the same program twice. And the
+application re-solves its schedule on every interaction, so "the answer has
+changed" is a claim with a latency attached rather than a fact.
+
+### What that costs
+
+A gate is worth the meaning of its red. A red that means *your branch broke
+something* gets fixed. A red that means *try again* teaches everyone to re-run
+until green, which is indistinguishable from having no gate -- except that it
+costs money and time, and it teaches you to distrust the runs that are honest.
+
+I did not fix this. It is recorded with its measurement, in the README's
+limitations and here, rather than tuned until it looked green. What I can say
+precisely is which half of the suite means what, and I would rather a reader know
+that than believe a green I cannot defend.
+
 ## What I'd tell you if you're doing this
 
 1. **Reproduce against production before you change anything.** I would have
@@ -312,6 +357,10 @@ Both are printed in green. Only one of them is about your product.
    itself as it runs prints the same green as one that does not. If you cannot
    say which half of yours is which, run it strict once and find out. It took me
    one command to learn that half of mine had never run.
+7. **Learn your gate's flake rate and say it out loud.** "It's green" is not a
+   fact about your product until you know how often it is green when it should
+   not be. I found mine by accident, on a pull request that would not go green
+   for reasons that kept changing. Nobody finds it on purpose.
 
 ## What's missing
 
@@ -323,6 +372,9 @@ infer otherwise. Scenarios live in the URL, so a scenario is a link you keep, no
 an object you name.
 
 And the suite still has a hole. A user found the `+` button. There may be more.
+
+The browser gate is also flaky at about 5% of results, which I measured and could
+not fix. That is the one number here I would most like to have wrong.
 
 ---
 

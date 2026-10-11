@@ -355,8 +355,9 @@ assert on. There is no mock path anywhere in the codebase.
   `Increasing a load's energy re-solves the schedule` on one run, `A rejected
   usage import explains itself` and `Expanding a bill line reveals the rule that
   produced it` on the next, both of which pass in isolation against the very same
-  preview. That is roughly a 5% per-run flake rate, and no single test is
-  reliably failing. Lowering concurrency from 4 to 2 did not remove it. The honest
+  preview. That is 5 failures out of 93 test results, about 5%, spread across four
+  different tests -- so it is a per-result rate, not a 5% chance that any
+  particular test will fail, and no single test is reliably failing. Lowering concurrency from 4 to 2 did not remove it. The honest
   reading is that this half of the suite is a smoke alarm rather than a
   proof: it catches large breakage and occasionally cries wolf. The 18 API tests
   and the 111 Rust tests are the half whose green means something.
