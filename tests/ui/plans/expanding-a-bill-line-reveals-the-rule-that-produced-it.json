@@ -1,0 +1,26 @@
+{
+  "name": "Expanding a bill line reveals the rule that produced it",
+  "test_id": "508621be-b90c-42b0-a602-e0b2520b08f0",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app, wait for the initial solve, then scroll to the two bills side by side."
+    },
+    {
+      "type": "action",
+      "description": "Click the row labelled 'Overnight' in the SCHEDULED bill."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the row expands to show the minutes billed, the micro-USD-per-kWh rate, and the energy, rather than only the amount."
+    },
+    {
+      "type": "action",
+      "description": "Click the same row again."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the row collapses back to its single line."
+    }
+  ]
+}

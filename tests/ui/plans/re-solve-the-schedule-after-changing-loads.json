@@ -1,0 +1,30 @@
+{
+  "name": "Re-solve the schedule after changing loads",
+  "test_id": "60d8576a-a2f3-4dfb-b91e-814972aa10ff",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the load management section"
+    },
+    {
+      "type": "action",
+      "description": "Click the control to add a load"
+    },
+    {
+      "type": "action",
+      "description": "Click the control to re-solve the schedule"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the schedule outcome is updated after recalculation"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the managed loads remain displayed"
+    }
+  ]
+}

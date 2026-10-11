@@ -1,0 +1,34 @@
+{
+  "name": "Increasing a load's energy re-solves the schedule",
+  "test_id": "a80fe58a-5ac8-4b57-9932-d346cf759905",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve to finish."
+    },
+    {
+      "type": "action",
+      "description": "Record the EV charger's energy figure, its slot count, and the saving figure in the Outcome section."
+    },
+    {
+      "type": "action",
+      "description": "Press '+' on the EV charger once and wait for the app to finish re-solving."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the EV charger's energy figure has risen by exactly 0.5 kWh from the value you recorded."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the saving figure or the scheduled bill total has changed from the value you recorded, proving the schedule was recomputed rather than left stale on screen."
+    },
+    {
+      "type": "action",
+      "description": "Press '-' once and wait for the re-solve."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the energy figure has returned to the value you first recorded."
+    }
+  ]
+}

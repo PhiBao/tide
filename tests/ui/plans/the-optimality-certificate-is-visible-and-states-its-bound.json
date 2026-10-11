@@ -1,0 +1,22 @@
+{
+  "name": "The optimality certificate is visible and states its bound",
+  "test_id": "7e2395a9-89cb-464a-a516-e0b024d88165",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve to finish."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a certificate reading 'proved optimal' is visible in the Outcome section, in a teal outline."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the text beside it states that this schedule costs exactly the theoretical floor so that no cheaper schedule exists, and that it prints both the bound and the actual cost."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the printed bound and the printed actual cost are the same figure."
+    }
+  ]
+}

@@ -36,7 +36,9 @@ you stop trusting the ones that do work.
 
 ## Why I'm telling you about it
 
-Because all 18 of my tests passed against that build.
+Because all eighteen browser tests I had at the time passed against that build.
+The suite is 34 now; the number is smaller here because this is the story of what
+was green then.
 
 I had wired the suite into CI properly. It ran on every PR, against that PR's
 own preview, as a required check. Green every time. And it had no idea the
@@ -162,9 +164,9 @@ possible at all.
 
 ## The suite, honestly
 
-33 tests: 19 UI, 14 API. 88 Rust tests behind them.
+52 tests: 34 UI, 18 API. 111 Rust tests behind them.
 
-The 14 API tests are **authored, not generated**. I gave TestSprite a precise
+The 18 API tests are **authored, not generated**. I gave TestSprite a precise
 OpenAPI spec and it produced 40 tests asserting a contract that doesn't exist —
 a `price_grid_id` resource the API has never had, `grid` as a slot/value array
 when it's an object, a `cost` key where the API returns `weighted_price`, 401s
@@ -181,6 +183,57 @@ what a generator believed.
 The authored ones assert exact micro-dollar totals: 5 kWh in the trough bills
 **$0.225**, the same 5 kWh at midday bills **$1.20**. Not `less than`. Equal to.
 
+## The suite lied to me once, and I only found out because it went red
+
+This one is worth the telling, because the failure was not in the product. It
+was in my idea of what a test suite *is*.
+
+The suite lives in two places. My repository holds the tests — the version you
+can read, and the version whose commit history says why each assertion exists.
+TestSprite holds the copy that runs. I think of the repo as the source of truth,
+and it is, but the copy that decides whether a pull request is allowed to merge
+is the other one. Nothing kept them in step.
+
+So they drifted. I hardened the history endpoints to partition data per browser
+session, and two of the API tests had to change with them: they had been making
+bare `requests.post` calls, which do not carry a cookie, so under the new scheme
+each call landed in its own partition. I fixed both, in the repo. I never sent
+them on.
+
+CI went red. And it went red with this:
+
+> the second import must insert nothing, inserted 8
+> Analysis: duplicate detection/idempotency is not working for repeated history imports.
+
+That is a confident, specific, wrong diagnosis. Idempotency worked exactly as
+designed. I ran it against production by hand and the second import inserted
+zero rows, twice, by two different mechanisms. The old test was running. It
+called `requests.post` twice, got two fresh sessions, and — being a *different,
+older test* — reported the result under the name of a test I had already fixed.
+
+Here is the part that should worry you. Before I found the cause, I believed the
+report. I was halfway to "fixing" an idempotency bug that did not exist, in a
+storage layer that was working, on the strength of a red check whose *name* I
+recognised. I had read the test. I had written it. I had fixed it that morning.
+
+**A test that runs different code from the one you read is not a weak test. It is
+a false one.** It is worse than having no test, because a missing test tells you
+nothing while a false one tells you something, in the confident voice of tooling,
+and you act on it.
+
+So the binding is now explicit — a file maps each test to the id that executes it
+— and `scripts/suite-sync.py` checks it both ways: every committed test must
+match what the portal runs, and every test on the portal must be committed here.
+CI runs that check *before* the suite runs, so a pull request that edits a test
+without sending the edit on fails at the check rather than reporting a green run
+about code that never executed.
+
+The check cost about eighty lines and fires on all four layers — API code, UI
+plans, UI code, and the structure of the binding itself. It found a second
+problem the moment I wrote it: one test existed only on the portal, so the
+repository was quietly missing part of the suite it claimed to carry. Nobody
+would have noticed. That is the point.
+
 ## What I'd tell you if you're doing this
 
 1. **Reproduce against production before you change anything.** I would have
@@ -192,13 +245,18 @@ The authored ones assert exact micro-dollar totals: 5 kWh in the trough bills
 4. **Prefer a small real system with visible evidence** over a large one with
    claims. The oracle's `null` is worth more than any confident number I could
    have faked.
+5. **Check that the test that ran is the test you read.** Two copies are still
+   one suite, and only one of them decides whether you may merge. If nothing
+   proves they agree, assume they don't.
 
 ## What's missing
 
-Still missing, stated plainly: no persistence, no usage import, tiered
-volumetric rates, battery arbitration. You cannot enter your own 12 months of
-smart-meter data yet — which is the step that turns a demonstration into a
-personal answer.
+Still missing, stated plainly: tiered volumetric rates, battery arbitration, and
+accounts. You can store your own smart-meter export and see every tariff priced
+against it, but the store is partitioned by a cookie rather than a login — a
+partition key is not a credential, and I say so in the README rather than let you
+infer otherwise. Scenarios live in the URL, so a scenario is a link you keep, not
+an object you name.
 
 And the suite still has a hole. A user found the `+` button. There may be more.
 

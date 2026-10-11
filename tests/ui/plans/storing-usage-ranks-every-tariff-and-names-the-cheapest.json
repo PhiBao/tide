@@ -1,0 +1,42 @@
+{
+  "name": "Storing usage ranks every tariff and names the cheapest",
+  "test_id": "47a2c3e0-c366-4cf2-b7c5-dbce08b5926f",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve to finish."
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the section headed 'Which tariff should you be on?'."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that section explains every bundled tariff is priced against the stored usage, cheapest first, and that readings are kept against this browser only."
+    },
+    {
+      "type": "action",
+      "description": "In the 'Your own usage' section above, click 'Use a sample' to fill the textarea."
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Store and rank' button and wait for the result."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a ranked list appears with four tariffs, each showing its name and its total cost."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the FIRST row is marked as 'cheapest' and shows the note 'the floor for this period' rather than an amount more."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the other rows each show an amount more than the cheapest, and that each amount more is the difference between that row's cost and the cheapest row's cost."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a line beneath the list summarises the period, naming the number of intervals, the total energy, the number of days and the mean energy per interval."
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Switch tariffs and re-run the scenario",
+  "test_id": "cca1786f-ffd6-44ff-8308-b5210d505193",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the Tide energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Select the flat rate tariff from the tariff chooser"
+    },
+    {
+      "type": "action",
+      "description": "Click the re-solve control"
+    },
+    {
+      "type": "action",
+      "description": "Select a different tariff from the tariff chooser"
+    },
+    {
+      "type": "action",
+      "description": "Click the re-solve control again"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the scenario outcome updates after the tariff change"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the schedule and savings summary are displayed for the current tariff"
+    }
+  ]
+}

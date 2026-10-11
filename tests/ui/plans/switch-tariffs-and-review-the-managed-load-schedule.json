@@ -1,0 +1,26 @@
+{
+  "name": "Switch tariffs and review the managed load schedule",
+  "test_id": "1811b433-1f07-45cf-a0cd-5b7d085a0001",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Select a different tariff"
+    },
+    {
+      "type": "action",
+      "description": "Click the control to re-solve the schedule"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the managed load inventory is displayed"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the optimization outcome reflects the selected tariff"
+    }
+  ]
+}

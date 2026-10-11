@@ -1,0 +1,22 @@
+{
+  "name": "Verify scheduled versus current cost comparison",
+  "test_id": "7946146b-9ff1-48b3-8c18-94959873a766",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the optimization results to load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the scheduled cost is displayed in the outcome section"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the current run cost is displayed in the outcome section"
+    }
+  ]
+}

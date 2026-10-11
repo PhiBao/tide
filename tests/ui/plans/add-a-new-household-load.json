@@ -1,0 +1,26 @@
+{
+  "name": "Add a new household load",
+  "test_id": "d6a5f1fa-d7a0-4f33-916d-63880309d429",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the load management section"
+    },
+    {
+      "type": "action",
+      "description": "Click the control to add a load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a new load appears in the load inventory"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the optimization outcome remains displayed"
+    }
+  ]
+}

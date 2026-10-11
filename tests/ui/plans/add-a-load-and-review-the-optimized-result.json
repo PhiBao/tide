@@ -1,0 +1,26 @@
+{
+  "name": "Add a load and review the optimized result",
+  "test_id": "c42f4bb9-8c97-483a-a6c3-70887c210d38",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy scheduling page"
+    },
+    {
+      "type": "action",
+      "description": "Add a load to the schedule"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the schedule to recompute"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the load list includes the newly added load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the outcome section shows an updated optimal schedule"
+    }
+  ]
+}

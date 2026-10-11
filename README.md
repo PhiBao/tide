@@ -9,7 +9,7 @@ arithmetic yourself.
 
 ```
 Live:  https://tide.kiter0211.workers.dev
-Suite: TestSprite project 949b0571-*. (18/18 passing at time of writing)
+Suite: TestSprite projects 949b0571-* (34 UI) and 235f314b-* (18 API), all passing
 ```
 
 ---
@@ -130,7 +130,7 @@ DNS-safe by construction and removes the guesswork.
 | Criterion | How Tide answers it |
 |---|---|
 | 40% Project Quality | A polished, deterministic app with deliberate loading, empty and error states; 85 Rust tests behind it (55 core unit, 14 solver integration, 16 HTTP). |
-| 40% Tests That Run Themselves | **52 tests, all green.** 34 UI tests gating every PR against that PR's own preview, plus 18 authored API tests asserting exact micro-dollar totals. Coverage spans all four tariffs, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, the empty state, mobile row layout, and every failure mode. |
+| 40% Tests That Run Themselves | **52 tests, all green.** 34 UI tests gating every PR against that PR's own preview, plus 18 authored API tests asserting exact micro-dollar totals. Coverage spans all four tariffs, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, the empty state, mobile row layout, and every failure mode. Both suites are committed here and bound to the ids that execute them (`tests/suite.json`), and CI proves the two copies agree *before* the suite runs — they drifted once, and a green run about code that never executed is worse than no run at all. |
 | 20% Innovation | The proof-backed optimiser, the exact rate engine, and the per-PR preview architecture |
 | ∞ Engagement | Long-form write-ups, Discord and X participation |
 
@@ -236,10 +236,18 @@ NEXT_PUBLIC_API_BASE=https://tide.kiter0211.workers.dev
 
 **The proof is a pull request.** [PR #1](https://github.com/PhiBao/tide/pull/1) is
 the submission artefact: its checks tab shows `Checks`, `Preview` and
-`TestSprite` all green, with TestSprite dispatching 18 tests against
+`TestSprite` all green, with TestSprite dispatching the UI suite against
 `https://pr-1-tide.kiter0211.workers.dev` — the preview built from that PR's own
-commit — and reporting 18/18 passed. The live URL below is deployed from `main`
-by the same pipeline.
+commit — and reporting **18/18 passed**. The suite has grown since; the gate
+now runs 34. The live URL below is deployed from `main` by the same pipeline.
+
+**And here is the case worth reading.** [PR #2](https://github.com/PhiBao/tide/pull/2)
+is a bug found by hand, turned into a test, and fixed *because* the test failed.
+Its run dispatched 19 tests against `https://pr-2-tide.kiter0211.workers.dev`,
+the first of them red against the deployed build, and the last
+**19/19 green** against the commit that fixed it. That is the whole argument for
+self-running tests, and it happened on a real defect rather than a rehearsal:
+the `+` / `−` controls changed state and nothing downstream moved.
 
 **Try this first:** open the live URL and watch the ribbon. The trough on the
 left is the cheap overnight window; the crimson wall to its right is the
@@ -362,6 +370,10 @@ crates/core/     pure domain: money, time, rates, solver, oracle, verify
 crates/api/      Axum router, shared by native tests and the Worker
 crates/worker/   Cloudflare Worker entrypoint (wasm32)
 web/             Next.js frontend, static export
+tests/           both suites: suite.json binds each test to the id that runs it
+                 backend/  18 authored API tests
+                 ui/       34 browser tests, each as a plan and as Playwright
+scripts/         suite-sync.py: proves the committed suite is the suite that runs
 docs/diagrams/   architecture, proof loop, and PR-gate diagrams
 .github/         CI: fmt, clippy, test, preview deploy, TestSprite gate
 ```
@@ -371,7 +383,8 @@ docs/diagrams/   architecture, proof loop, and PR-gate diagrams
 ## Long-form write-up
 
 [**Building a scheduler that proves its own answer**](docs/building-a-self-proving-scheduler.md)
-— why all 18 tests passed against a build whose primary control did nothing, what
+— why all eighteen browser tests I had at the time passed against a build whose
+primary control did nothing, what
 that says about what a green suite means, and the three bugs (a date algorithm,
 a timezone convention, and 1.4 kWh nobody asked for) that taught me the most.
 

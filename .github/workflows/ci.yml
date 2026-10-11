@@ -51,7 +51,7 @@ jobs:
     name: Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -87,13 +87,13 @@ jobs:
     outputs:
       url: ${{ steps.mint.outputs.url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
@@ -175,14 +175,26 @@ jobs:
     # Runs against the PR's own preview, so it is a PR-only job by construction.
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
       - name: Install TestSprite CLI
         run: npm install -g @testsprite/testsprite-cli
+
+      # The suite that runs must be the suite this repository describes. Both
+      # copies drifted once -- a fix landed here while the portal kept running
+      # the old code -- and the only symptom was a red run whose reported cause
+      # was not the real one. So the check is part of the gate: a pull request
+      # that edits a test without sending the edit on fails here, before the
+      # suite runs, rather than reporting a green run about code that never
+      # executed.
+      - name: Prove the suite here is the suite that runs
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+        run: python3 scripts/suite-sync.py
 
       - name: Run suite against the preview
         env:
@@ -217,7 +229,7 @@ jobs:
 
       - name: Upload JUnit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: testsprite-junit-pr${{ github.event.pull_request.number }}
           path: testsprite-junit.xml
@@ -246,13 +258,13 @@ jobs:
     needs: checks
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
@@ -295,14 +307,14 @@ jobs:
   # deliberate limitation, not an oversight:
   #
   # `--target-url` is silently ignored for backend projects — verified by
-  # pointing it at a URL that does not serve this API and watching all 14 tests
+  # pointing it at a URL that does not serve this API and watching all 18 tests
   # still pass. And the Starter plan allows exactly one TestSprite environment,
   # so per-PR environment names are not available either. Wiring the backend
   # suite into the PR gate with `--target-url` would therefore produce a green
   # check that proves nothing about the pull request.
   #
   # The per-PR gate is the frontend suite, which does honour `--target-url` and
-  # tests the branch's own preview. This suite is the API contract: 14 tests
+  # tests the branch's own preview. This suite is the API contract: 18 tests
   # asserting exact micro-dollar totals against the deployed service.
   # -------------------------------------------------------------------------
   api-contract:
@@ -311,12 +323,19 @@ jobs:
     needs: deploy
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
       - name: Install TestSprite CLI
         run: npm install -g @testsprite/testsprite-cli
+
+      # Same check as the per-PR gate, for the same reason: a red suite is only
+      # evidence if the suite that ran is the one committed here.
+      - name: Prove the suite here is the suite that runs
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+        run: python3 scripts/suite-sync.py
 
       - name: Run the API contract suite against production
         env:
@@ -357,7 +376,7 @@ jobs:
 
       - name: Upload the report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-contract-junit
           path: api-junit.xml

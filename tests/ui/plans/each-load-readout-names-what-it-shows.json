@@ -1,0 +1,18 @@
+{
+  "name": "Each load readout names what it shows",
+  "test_id": "59c04d76-35bc-4780-8f33-d273cf1ffc0b",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the EV charger row shows an energy figure with a 'by slot' sub-label giving its deadline, a power figure with a sub-label giving how many slots it occupies, and the three controls."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the sub-label under the power figure states a slot count in the form 'N slots'."
+    }
+  ]
+}

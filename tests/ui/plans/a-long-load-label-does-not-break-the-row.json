@@ -1,0 +1,18 @@
+{
+  "name": "A long load label does not break the row",
+  "test_id": "4fb8257e-bbef-4dd6-b6ce-d6060672af31",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve."
+    },
+    {
+      "type": "action",
+      "description": "Click into the EV charger's label field, select all text, and type 'Garage Level 2 Fast Charger Backup Unit'."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the row still shows the energy figure, the power figure and all three controls with no overlap, with the long name truncated rather than pushing the other columns out of place."
+    }
+  ]
+}

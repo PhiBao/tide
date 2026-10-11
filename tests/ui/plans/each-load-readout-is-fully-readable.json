@@ -1,0 +1,30 @@
+{
+  "name": "Each load readout is fully readable",
+  "test_id": "54c7646c-23ba-4073-b7a5-ab153a19a053",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve to finish."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the EV charger row shows a power figure reading '7.0 kW' in full \u2014 the unit and decimal place must both be visible, not cut off."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the same row shows a slot count sub-label reading '7 slots' in full."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify all three controls ('-', '+' and 'x') are visible in the same row, each fully inside the row and not overlapping the text."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the energy figure reading '12 kWh' and the sub-label 'by slot 95' are both visible in the same row."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify no two of the four items overlap: the label, the two figures, and the controls."
+    }
+  ]
+}

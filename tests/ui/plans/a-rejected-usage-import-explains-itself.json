@@ -1,0 +1,30 @@
+{
+  "name": "A rejected usage import explains itself",
+  "test_id": "8f585523-00ce-4c45-91d0-7800d758dae5",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve."
+    },
+    {
+      "type": "action",
+      "description": "In 'Your own usage', clear the textarea and paste: first line 'timestamp,kwh', second line '2020-01-01T00:00:00Z,1.0'."
+    },
+    {
+      "type": "action",
+      "description": "Click 'Bill this usage'."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify an error message appears instead of a bill, and that it mentions the timestamp or alignment so a user can tell what to fix."
+    },
+    {
+      "type": "action",
+      "description": "Clear the textarea, paste just the word 'garbage', and click 'Bill this usage' again."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a second, different error appears naming the line or the value that could not be read."
+    }
+  ]
+}

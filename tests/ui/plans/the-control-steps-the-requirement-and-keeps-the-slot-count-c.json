@@ -1,0 +1,42 @@
+{
+  "name": "The + control steps the requirement and keeps the slot count consistent",
+  "test_id": "4495aef1-5405-4b5a-9506-839937a0c3f9",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve to finish."
+    },
+    {
+      "type": "action",
+      "description": "Read the EV charger row and record its energy figure and its slot count. Note that the EV charger draws 7.0 kW on 15-minute slots, so each slot carries 1.75 kWh and the slot count is the energy divided by 1.75 rounded up."
+    },
+    {
+      "type": "action",
+      "description": "Press the '+' button on the EV charger exactly once and wait for the re-solve."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the energy figure has risen by exactly 0.5 kWh from the value you recorded."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the slot count did not decrease, and that it equals the new energy divided by 1.75 rounded up."
+    },
+    {
+      "type": "action",
+      "description": "Press '+' two more times, waiting for each re-solve, and record the energy and slot count each time."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify each press raised the energy by exactly 0.5 kWh, and that the slot count never decreased and always equalled energy divided by 1.75 rounded up. The slot count staying the same across a press is correct behaviour when the energy has not crossed the next 1.75 kWh boundary, not a bug."
+    },
+    {
+      "type": "action",
+      "description": "Press '-' three times to return to the original energy, waiting for each re-solve."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the energy figure has returned to the value you first recorded, and the slot count with it."
+    }
+  ]
+}

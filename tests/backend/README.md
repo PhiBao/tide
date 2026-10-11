@@ -56,3 +56,24 @@ testsprite test run --all --project "$TESTSPRITE_PROJECT_ID" --wait
 ```
 
 `VAR_{url}` is substituted by the runner with the target base URL.
+
+## The binding, and why it exists
+
+`tests/suite.json` binds each file here to the TestSprite test that executes it.
+That binding is not bookkeeping — it is checked, in both directions, by
+`scripts/suite-sync.py`, and CI runs the check before this suite runs.
+
+The reason is a failure mode worth naming. These files and the copies on
+TestSprite are the same test written twice: this directory is the source of
+truth, and the portal holds the copy that runs. Nothing kept them in step, so
+they drifted. A fix landed here while the portal went on running the previous
+version, and the only symptom was a red run whose reported cause — *idempotency
+is not working* — was not the real one. Nothing was wrong with idempotency. The
+old test was running.
+
+Editing a file here does not change what runs. Send the edit on, then check:
+
+```bash
+python3 scripts/suite-sync.py --push     # this repository's version -> the portal
+python3 scripts/suite-sync.py            # prove the two now agree
+```

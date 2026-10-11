@@ -1,0 +1,34 @@
+{
+  "name": "Storing the same usage twice does not double it",
+  "test_id": "4c5367b1-6fa3-48b2-b5ac-83553237f337",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app, wait for the initial solve, and click 'Use a sample'."
+    },
+    {
+      "type": "action",
+      "description": "Click 'Store and rank' and wait, then note the total energy shown beneath the ranked list."
+    },
+    {
+      "type": "action",
+      "description": "Click 'Store and rank' a second time with the same textarea contents and wait."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the total energy shown beneath the ranked list is the SAME as before, not doubled, and that a note appears saying intervals were already stored so nothing was duplicated."
+    },
+    {
+      "type": "action",
+      "description": "Click 'Forget my data' and wait."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the ranked list is cleared and a note reports how many intervals were removed."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the section states that nothing is stored yet, rather than showing an empty or stale ranking."
+    }
+  ]
+}

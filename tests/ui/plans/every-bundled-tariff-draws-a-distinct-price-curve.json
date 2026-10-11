@@ -1,0 +1,30 @@
+{
+  "name": "Every bundled tariff draws a distinct price curve",
+  "test_id": "c7839e75-cd58-45f5-9a76-4b5833a8a6b4",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve to finish."
+    },
+    {
+      "type": "action",
+      "description": "Note the shape of the price ribbon: which hours are the cheap teal trough and which are crimson."
+    },
+    {
+      "type": "action",
+      "description": "Switch the tariff selector from 'Overnight EV' to 'Evening peak' and wait for the ribbon to redraw."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the ribbon redraws as a different curve, with the trough and peak at different hours than 'Overnight EV'."
+    },
+    {
+      "type": "action",
+      "description": "Switch to 'Summer afternoon peak', then to 'Flat rate', waiting for each redraw."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify each tariff produces its own curve, and that 'Flat rate' renders a single uniform band because its price never changes."
+    }
+  ]
+}

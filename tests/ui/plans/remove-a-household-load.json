@@ -1,0 +1,30 @@
+{
+  "name": "Remove a household load",
+  "test_id": "035decf6-4247-4650-86b0-b8e0f53b2f8b",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the load management section"
+    },
+    {
+      "type": "action",
+      "description": "Remove one household load using its control"
+    },
+    {
+      "type": "action",
+      "description": "Click the control to re-solve the schedule"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the load inventory is still displayed"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a refreshed optimization outcome is displayed"
+    }
+  ]
+}

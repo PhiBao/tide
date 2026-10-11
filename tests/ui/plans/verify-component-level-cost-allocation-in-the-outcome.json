@@ -1,0 +1,26 @@
+{
+  "name": "Verify component-level cost allocation in the outcome",
+  "test_id": "ffbb043c-9958-461b-91ef-dbea9108d8e1",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the optimization results to load"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the outcome section"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify component-level cost allocation is displayed for the scheduled result"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify component-level cost allocation is displayed for the current run result"
+    }
+  ]
+}

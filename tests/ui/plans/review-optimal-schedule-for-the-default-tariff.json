@@ -1,0 +1,22 @@
+{
+  "name": "Review optimal schedule for the default tariff",
+  "test_id": "18623f19-db5b-4221-b1c8-8543390ae8a5",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy scheduling page"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the schedule to load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify an optimized schedule summary is displayed"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the schedule is marked as proven optimal"
+    }
+  ]
+}

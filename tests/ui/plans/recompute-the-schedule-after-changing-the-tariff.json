@@ -1,0 +1,26 @@
+{
+  "name": "Recompute the schedule after changing the tariff",
+  "test_id": "0b17ec8b-c930-43d6-88f7-5cb497520704",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy scheduling page"
+    },
+    {
+      "type": "action",
+      "description": "Select a different tariff"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the schedule to recompute"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the scheduled cost and savings summary is updated"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the schedule remains marked as proven optimal"
+    }
+  ]
+}

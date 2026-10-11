@@ -1,0 +1,30 @@
+{
+  "name": "Increase a load allocation",
+  "test_id": "b8f8de37-23eb-4c1b-a149-2cc161ed4e88",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the load management section"
+    },
+    {
+      "type": "action",
+      "description": "Increase one household load using its control"
+    },
+    {
+      "type": "action",
+      "description": "Click the control to re-solve the schedule"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the load inventory is still displayed"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify an updated optimization outcome is displayed"
+    }
+  ]
+}

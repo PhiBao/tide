@@ -1,0 +1,22 @@
+{
+  "name": "Review load allocation across time slots",
+  "test_id": "a6164182-fae1-402a-bac0-420d6db0c28d",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy scheduling page"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the schedule visualization to load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify load entries are displayed in the schedule"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the schedule visualization shows time-slot allocation for the loads"
+    }
+  ]
+}

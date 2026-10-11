@@ -1,0 +1,30 @@
+{
+  "name": "Importing usage produces an exact bill",
+  "test_id": "972e29af-9f17-4f8f-beee-a1715dc2a237",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve to finish."
+    },
+    {
+      "type": "action",
+      "description": "In 'Your own usage', click 'Use a sample'."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the textarea fills with rows beginning 'timestamp,kwh' followed by ISO-8601 timestamps."
+    },
+    {
+      "type": "action",
+      "description": "Click 'Bill this usage' and wait for the result."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a panel titled 'Your usage, on this tariff' appears with a dollar total, alongside a panel titled 'What the parser read' showing Intervals read of 20 and Outside the horizon of 0."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the energy metered in the parser panel equals the sum of the energies across the bill's lines."
+    }
+  ]
+}

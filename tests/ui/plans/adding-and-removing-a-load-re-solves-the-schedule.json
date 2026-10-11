@@ -1,0 +1,26 @@
+{
+  "name": "Adding and removing a load re-solves the schedule",
+  "test_id": "99537b19-ebf3-4ed5-a518-1ab8f8e9bffc",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app, wait for the initial solve, and note the saving figure and the EV charger's slot count."
+    },
+    {
+      "type": "action",
+      "description": "Click '+ Add a load'."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a fourth load row appears and the saving figure or slot counts change, proving the schedule was recomputed rather than left stale."
+    },
+    {
+      "type": "action",
+      "description": "Remove the new load with its 'x' button."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the row disappears and the figures return to their previous values."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "Verify outcome summary after optimization",
+  "test_id": "ded863bc-4880-4fcc-9a70-ca2dc3508c25",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the optimization results to load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the outcome section shows the overall savings summary"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the schedule is marked as optimal"
+    }
+  ]
+}

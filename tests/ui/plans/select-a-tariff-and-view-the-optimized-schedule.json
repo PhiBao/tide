@@ -1,0 +1,26 @@
+{
+  "name": "Select a tariff and view the optimized schedule",
+  "test_id": "bfd284e2-cc95-49d9-88ef-7dc0e820b7be",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the Tide energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Select the overnight EV tariff from the tariff chooser"
+    },
+    {
+      "type": "action",
+      "description": "Click the re-solve control"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the optimized schedule is displayed"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify savings and comparison cost information are displayed"
+    }
+  ]
+}

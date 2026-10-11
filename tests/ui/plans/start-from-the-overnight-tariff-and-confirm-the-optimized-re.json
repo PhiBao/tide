@@ -1,0 +1,26 @@
+{
+  "name": "Start from the overnight tariff and confirm the optimized result",
+  "test_id": "e821c94f-7eef-40e1-8f70-ac12391a366e",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the Tide energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Select the overnight EV tariff from the tariff chooser"
+    },
+    {
+      "type": "action",
+      "description": "Click the re-solve control"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the optimized household schedule is displayed"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the scenario outcome indicates the schedule is optimal"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "Review scheduled versus running-now cost breakdown",
+  "test_id": "65761ca9-ec57-41fa-97f6-b68261f0b27a",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the energy scheduling page"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the outcome section to load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the scheduled cost breakdown is displayed"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the running-now cost breakdown is displayed"
+    }
+  ]
+}

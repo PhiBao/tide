@@ -1,0 +1,34 @@
+{
+  "name": "Add a household load before solving",
+  "test_id": "6020dbfc-9f2c-4386-8e6f-03570772b52a",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the Tide energy management page"
+    },
+    {
+      "type": "action",
+      "description": "Select the flat rate tariff from the tariff chooser"
+    },
+    {
+      "type": "action",
+      "description": "Click the add a load control"
+    },
+    {
+      "type": "action",
+      "description": "Select a load to add to the scenario"
+    },
+    {
+      "type": "action",
+      "description": "Click the re-solve control"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the added load is included in the scenario"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify an updated optimized outcome is displayed"
+    }
+  ]
+}

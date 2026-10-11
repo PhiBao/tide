@@ -1,0 +1,26 @@
+{
+  "name": "An empty load list is handled without a crash or an invented schedule",
+  "test_id": "e4df2025-424c-4a62-95cd-3f91cdff6f17",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the app and wait for the initial solve."
+    },
+    {
+      "type": "action",
+      "description": "Remove all three loads one at a time using the 'x' button on each row, waiting briefly between each."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the page stays stable: no error appears, no crash occurs, and no schedule is invented for zero loads."
+    },
+    {
+      "type": "action",
+      "description": "Click 'Add a load'."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a new load row appears with a default energy of 2 kWh and that the ribbon still renders."
+    }
+  ]
+}
