@@ -205,6 +205,26 @@ jobs:
           TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
         run: python3 scripts/suite-sync.py
 
+      # A suite that did not run is not a suite that passed, so this fails rather
+      # than skipping. But it fails with the reason named, because the
+      # alternative is an opaque exit code 12 several layers down -- and a red
+      # nobody can read is how a team learns to ignore red.
+      - name: Check the credit balance
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+          NEEDED: 16
+        run: |
+          available="$(testsprite --output json credits 2>/dev/null | jq -r '.activeOrg.remaining // empty')"
+          if [ -z "$available" ]; then
+            echo "::error title=Credit check failed::could not read the balance; treating as unknown rather than affordable."
+            exit 1
+          fi
+          echo "TestSprite credits available: $available; this suite needs about $NEEDED"
+          if ! awk -v a="$available" -v n="$NEEDED" 'BEGIN { exit !(a >= n) }'; then
+            echo "::error title=Out of TestSprite credits::$available available, about $NEEDED needed. The suite cannot run, so this check is red rather than green -- it did not pass, it did not happen. Top up at https://www.testsprite.com/pricing"
+            exit 1
+          fi
+
       - name: Run suite against the preview
         env:
           TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
@@ -369,6 +389,26 @@ jobs:
         env:
           TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
         run: python3 scripts/suite-sync.py
+
+      # A suite that did not run is not a suite that passed, so this fails rather
+      # than skipping. But it fails with the reason named, because the
+      # alternative is an opaque exit code 12 several layers down -- and a red
+      # nobody can read is how a team learns to ignore red.
+      - name: Check the credit balance
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+          NEEDED: 6
+        run: |
+          available="$(testsprite --output json credits 2>/dev/null | jq -r '.activeOrg.remaining // empty')"
+          if [ -z "$available" ]; then
+            echo "::error title=Credit check failed::could not read the balance; treating as unknown rather than affordable."
+            exit 1
+          fi
+          echo "TestSprite credits available: $available; this suite needs about $NEEDED"
+          if ! awk -v a="$available" -v n="$NEEDED" 'BEGIN { exit !(a >= n) }'; then
+            echo "::error title=Out of TestSprite credits::$available available, about $NEEDED needed. The suite cannot run, so this check is red rather than green -- it did not pass, it did not happen. Top up at https://www.testsprite.com/pricing"
+            exit 1
+          fi
 
       - name: Run the API contract suite against production
         env:
