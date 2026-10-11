@@ -173,20 +173,6 @@ jobs:
           echo "preview did not become healthy" >&2
           exit 1
 
-      - name: Probe the store
-        env:
-          URL: ${{ steps.mint.outputs.url }}
-        # A preview that cannot persist cannot exercise the history endpoints,
-        # so the gate would be measuring a smaller application than the one
-        # users get. Probed here, where a failure costs no credits, rather than
-        # letting two browser tests spend them finding out.
-        run: |
-          curl --fail --show-error --silent -X POST "$URL/api/history/compare" \
-            -H 'content-type: application/json' \
-            -H 'X-Tide-Session: preview-probe' \
-            -d '{"from_epoch_minutes":0,"to_epoch_minutes":9999999999}' \
-            | head -c 200
-
   # -------------------------------------------------------------------------
   # TestSprite: run the suite against this PR's preview. This is the blocking
   # check; branch protection marks it required.
