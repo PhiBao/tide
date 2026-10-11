@@ -121,39 +121,41 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         working-directory: crates/worker
-        # `--ignore-base-config` is load-bearing, not a preference. (It was named
-        # `--ignore-defaults` before the CLI renamed it, which is how a working
-        # local check met a failing runner: the npx cache had the older one.) Without it the
-        # Previews service applies its own settings instead of the bindings in
-        # wrangler.toml, and a preview comes up with no database at all. The
-        # frontend still serves, so the smoke probe passed, and the failure
-        # surfaced only as two browser tests reporting "persistence is not
-        # configured for this deployment" -- which was the truth about the
-        # deployment and not about the branch.
+        # A real deployment to a PR-scoped Worker name, not `wrangler preview`.
+        #
+        # The Previews service builds a deployment that does not carry the D1
+        # binding from wrangler.toml, whatever the CLI is told -- `--ignore-defaults`
+        # and its successor `--ignore-base-config` are both accepted and neither
+        # changes it. The result was a preview that served the frontend and
+        # answered every /api/history/* request with "persistence is not
+        # configured for this deployment", so three browser tests blocked on
+        # every pull request and the gate could not go green at all.
+        #
+        # `wrangler deploy --name pr-N-tide` produces the same URL shape with
+        # the bindings the config declares, because it is an ordinary Worker.
+        # It shares the production store, partitioned per browser session, which
+        # the API suite already does for the same documented reason.
+        #
+        # The URL is scraped rather than parsed from JSON: `wrangler deploy` has
+        # no --json output, and a regex over the human output survives the
+        # banner and progress lines that --json was introduced to dodge.
         run: |
           set -o pipefail
-
-          # wrangler prints human-readable preamble lines before its --json
-          # payload, so the output has to be trimmed to the JSON object before
-          # jq can read it. Feeding the raw output to jq fails with
-          # "Invalid numeric literal" on the banner, which is a parsing problem
-          # and not an API one — the two are reported separately below.
-          if ! raw="$(npx wrangler preview --name "pr-${{ github.event.pull_request.number }}" --ignore-base-config --json 2>&1)"; then
+          name="pr-${{ github.event.pull_request.number }}-tide"
+          if ! raw="$(npx wrangler deploy --name "$name" 2>&1)"; then
             printf '%s\n' "$raw"
-            echo "::error title=Preview failed::wrangler could not create a preview for this PR."
+            echo "::error title=Preview failed::wrangler could not deploy a preview for this PR."
             echo "::error::CLOUDFLARE_API_TOKEN must be an Account API token with the"\
                   "'Edit Cloudflare Workers' permission, scoped to this account."
             exit 1
           fi
-
-          output="$(printf '%s\n' "$raw" | sed -n '/^{/,$p')"
-          if ! url="$(printf '%s' "$output" | jq -er '.preview.urls[0]')"; then
-            printf '%s\n' "$raw"
-            echo "::error title=Preview URL unreadable::wrangler succeeded but its JSON"\
-                  "did not contain preview.urls[0], so the output shape has changed."
+          printf '%s\n' "$raw"
+          url="$(printf '%s\n' "$raw" | grep -oE 'https://[A-Za-z0-9.-]+\.workers\.dev' | head -1)"
+          if [ -z "$url" ]; then
+            echo "::error title=Preview URL unreadable::wrangler succeeded but printed no"\
+                 "workers.dev URL, so the output shape has changed."
             exit 1
           fi
-          echo "Preview: $url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Smoke probe
