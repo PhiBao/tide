@@ -411,6 +411,8 @@ docs/diagrams/   architecture, proof loop, and PR-gate diagrams
 
 ## Licence
 
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. The Rust workspace declares `MIT OR Apache-2.0`, which is the standard dual licence for Rust crates — it keeps the core reusable by other Crates.io packages without forcing a licence choice on them.
+
 ## Long-form write-up
 
 [**Building a scheduler that proves its own answer**](docs/building-a-self-proving-scheduler.md)
@@ -418,5 +420,3 @@ docs/diagrams/   architecture, proof loop, and PR-gate diagrams
 primary control did nothing, what
 that says about what a green suite means, and the three bugs (a date algorithm,
 a timezone convention, and 1.4 kWh nobody asked for) that taught me the most.
-
-Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. The Rust workspace declares `MIT OR Apache-2.0`, which is the standard dual licence for Rust crates — it keeps the core reusable by other Crates.io packages without forcing a licence choice on them.
