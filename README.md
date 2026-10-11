@@ -9,8 +9,10 @@ arithmetic yourself.
 
 ```
 Live:  https://tide.kiter0211.workers.dev
-Suite: TestSprite projects 949b0571-* (34 UI) and 235f314b-* (18 API), all passing
+Demo:  docs/tide-demo.mp4  (97 seconds, narrated, every number taken from the app)
+Suite: TestSprite projects 949b0571-* and 235f314b-*, 52 tests across three bound suites
 ```
+
 
 ---
 
