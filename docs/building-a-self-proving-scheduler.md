@@ -101,16 +101,20 @@ The bound is valid but often loose. When the schedule costs *more* than the
 bound, I don't know whether I'm at the optimum or 5% away.
 
 So there's a second, independent check: a brute-force oracle that enumerates
-every feasible schedule. Small instances only — enumeration is exponential, and
-a 96-slot, six-load problem has 10¹⁴ combinations.
+every feasible schedule. Small instances only — enumeration is exponential, and a
+six-load, 96-slot instance is already hundreds of billions of candidate start
+positions before power levels are counted.
 
 The endpoint admits it:
 
 ```json
 {
-  "enumerated": false,
+  "solver_cost_micro_usd": 9000000,
   "optimal_cost_micro_usd": null,
-  "badge": "proof: not attempted (instance too large)"
+  "is_optimal": false,
+  "badge": "proof: not attempted (instance too large)",
+  "nodes_explored": 502,
+  "enumerated": false
 }
 ```
 
@@ -157,7 +161,7 @@ the product promises is reproducibility, the promise can't rest on a dice roll.
 
 So: integer micro-dollars, integer watt-hours, one division at presentation
 time. Every figure is reproducible by hand from the documented rules. The tests
-assert `375_000`, not `less than before`.
+assert `225_000`, not `less than before`.
 
 Determinism isn't a constraint I worked around. It's the reason the proof is
 possible at all.
@@ -285,8 +289,8 @@ accountable to and what a reader can check. The API suite binds **code** —
 authored Python, never re-authored, and CI now passes `--no-auto-heal` on that
 job so the guarantee is mine rather than inherited.
 
-That leaves the honest position, which is in the README's limitations rather
-than buried here: **breadth comes from the browser suite, precision from the
+That leaves the honest position, which is in the README's limitations as well as
+here: **breadth comes from the browser suite, precision from the
 API suite.** A browser test that is re-authored at run time can pass over a
 regression, because the agent is repairing the test and a green verdict cannot
 tell you which one it repaired. The API tests cannot do that: eighteen of them,
