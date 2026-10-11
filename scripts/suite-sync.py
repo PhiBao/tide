@@ -23,16 +23,14 @@ directions, for both suites:
 A pull request that edits a test without sending it on fails here, before the
 suite runs, rather than after a merge and a deploy.
 
-The two layers flow in opposite directions, which is not an accident:
+Both layers are authored here and copied to the portal, so both are repaired with
+`--push`. `--refresh-plans` is the opposite direction, and exists to re-export
+plans the portal regenerated rather than to repair a mistake.
 
-  * the *code* is authored here and copied to the portal, so drift in it is
-    repaired with `--push`;
-  * the *plan* is authored on the portal, and the file here is its export, so
-    drift in it is repaired with `--refresh-plans`.
-
-What is checked is the same either way: that this repository does not describe
-the suite inaccurately. An export that has fallen behind is the same fault as a
-fix that never shipped -- it tells a reader something untrue about what runs.
+What is checked either way is the same thing: that this repository does not
+describe the suite inaccurately. An export that has fallen behind is the same
+fault as a fix that never shipped -- it tells a reader something untrue about
+what runs.
 """
 
 from __future__ import annotations
@@ -144,6 +142,17 @@ def check_suite(suite: dict) -> tuple[list[tuple], list[str]]:
     bound = {entry["test_id"]: entry for entry in suite["tests"]}
     on_portal = {item["id"]: item for item in portal_tests(project_id)}
 
+    # The UI suite binds its plans and not its code. Frontend tests are executed
+    # by an agent against the plan, and the stored code is rewritten by that
+    # agent whenever it finds the generated selectors stale -- so the code is a
+    # run artefact, not a contract, and committing it would describe something
+    # that is not what ran.
+    layers = []
+    if suite["kind"] in ("plan", "plan+code"):
+        layers.append("plan")
+    if suite["kind"] in ("code", "plan+code"):
+        layers.append("code")
+
     drifted: list[tuple] = []
     problems: list[str] = []
 
@@ -156,38 +165,34 @@ def check_suite(suite: dict) -> tuple[list[tuple], list[str]]:
             )
             continue
 
-        if suite["kind"] == "code":
-            path = directory / entry["file"]
-            if not path.exists():
-                problems.append(f"[{suite['key']}] suite.json names a missing file: {entry['file']}")
+        for layer in layers:
+            relative = entry["file"] if suite["kind"] == "code" else entry.get(layer)
+            if not relative:
+                problems.append(
+                    f"[{suite['key']}] {entry} has no {layer} bound in suite.json"
+                )
                 continue
-            local, remote = normalise_code(path.read_text()), normalise_code(portal_code(test_id))
-            if local != remote:
-                drifted.append((test_id, f"{entry['file']}  <-  {item['name']}", local, remote, None))
-        else:
-            for layer, fetch, render in (
-                ("plan", portal_plan, normalise_plan),
-                ("code", portal_code, normalise_code),
-            ):
-                relative = entry.get(layer)
-                if not relative:
-                    problems.append(
-                        f"[{suite['key']}] {entry.get('code') or entry.get('plan')} "
-                        f"has no {layer} in suite.json"
-                    )
-                    continue
-                path = directory / relative
-                if not path.exists():
-                    problems.append(f"[{suite['key']}] suite.json names a missing file: {relative}")
-                    continue
-                if layer == "plan":
-                    stored = json.loads(path.read_text())
-                    local, remote = render(stored.get("planSteps")), render(fetch(test_id))
-                else:
-                    local, remote = render(path.read_text()), render(fetch(test_id))
+            path = directory / relative
+            if not path.exists():
+                problems.append(
+                    f"[{suite['key']}] suite.json names a missing file: {relative}"
+                )
+                continue
+
+            if layer == "plan":
+                stored = json.loads(path.read_text())
+                local = normalise_plan(stored.get("planSteps"))
+                remote = normalise_plan(portal_plan(test_id))
                 if local != remote:
                     drifted.append(
-                        (test_id, f"{relative}  <-  {item['name']}", local, remote, layer)
+                        (test_id, f"{relative}  <-  {item['name']}", local, remote, "plan")
+                    )
+            else:
+                local = normalise_code(path.read_text())
+                remote = normalise_code(portal_code(test_id))
+                if local != remote:
+                    drifted.append(
+                        (test_id, f"{relative}  <-  {item['name']}", local, remote, "code")
                     )
 
     for test_id, entry in bound.items():
@@ -228,23 +233,42 @@ def refresh_plans(suite: dict, drifted: list[tuple]) -> int:
 
 
 def push(suite: dict, drifted: list[tuple]) -> int:
-    """Send this repository's version of each drifted test to the portal."""
+    """Send this repository's version of each drifted artefact to the portal.
+
+    Both layers go this way. The plan is pushed with `test plan put --steps`,
+    which takes the same shape the file here already has, so the file that a
+    reader reviews is the file that is sent -- nothing is translated on the way
+    out, and there is no second format to keep in step.
+    """
     directory = ROOT / suite["dir"]
     failures = 0
-    if suite["kind"] == "code":
-        files = {e["test_id"]: e["file"] for e in suite["tests"]}
-    else:
-        files = {e["test_id"]: e["code"] for e in suite["tests"] if e.get("code")}
-    for test_id, label, _local, _remote, _layer in drifted:
-        relative = files.get(test_id)
-        if not relative:
-            print(f"  SKIP    {label}: no code file bound")
+    for test_id, label, _local, _remote, layer in drifted:
+        entry = next((e for e in suite["tests"] if e["test_id"] == test_id), None)
+        if entry is None:
             failures += 1
+            print(f"  SKIP    {label}: not bound in tests/suite.json")
             continue
-        version = code_version(test_id)
-        args = ["test", "code", "put", test_id, "--code-file", str(directory / relative)]
-        args += ["--expected-version", version] if version else ["--force"]
-        result = run(args)
+
+        if layer == "plan":
+            relative = entry.get("plan")
+            if not relative:
+                failures += 1
+                print(f"  SKIP    {label}: no plan file bound")
+                continue
+            result = run(
+                ["test", "plan", "put", test_id, "--steps", str(directory / relative)]
+            )
+        else:
+            relative = entry.get("code") or entry.get("file")
+            if not relative:
+                failures += 1
+                print(f"  SKIP    {label}: no code file bound")
+                continue
+            version = code_version(test_id)
+            args = ["test", "code", "put", test_id, "--code-file", str(directory / relative)]
+            args += ["--expected-version", version] if version else ["--force"]
+            result = run(args)
+
         if result.returncode == 0:
             print(f"  pushed  {relative}")
         else:
@@ -293,16 +317,20 @@ def main() -> int:
     if all_drifted and (args.push or args.refresh_plans):
         failures = 0
         if args.push:
-            print("\nPUSHING this repository's version of the code")
+            print("\nPUSHING this repository's version")
             for suite in suite_file["suites"]:
-                rows = [row for row in all_drifted if row[0] is suite and row[5] != "plan"]
+                rows = [row for row in all_drifted if row[0] is suite]
                 if rows:
                     print(f"  {suite['key']}:")
                     failures += push(suite, [row[1:] for row in rows])
         if args.refresh_plans:
             print("\nREFRESHING this repository's plan exports from the portal")
             for suite in suite_file["suites"]:
-                rows = [row for row in all_drifted if row[0] is suite and row[5] == "plan"]
+                rows = [
+                    row
+                    for row in all_drifted
+                    if row[0] is suite and row[5] == "plan" and not args.push
+                ]
                 if rows:
                     print(f"  {suite['key']}:")
                     refresh_plans(suite, [row[1:] for row in rows])
@@ -312,16 +340,12 @@ def main() -> int:
         return 1
 
     if all_drifted and not args.push and not args.refresh_plans:
-        layers = {row[5] for row in all_drifted}
         print(
-            f"\n{len(all_drifted)} artefact(s) drifted. The portal runs different code "
-            "from what this repository holds, so a green run would not be evidence "
-            "about the code under review.\n"
+            f"\n{len(all_drifted)} artefact(s) drifted. The portal runs a different "
+            "suite from the one this repository describes, so a green run would not "
+            "be evidence about the code under review.\n\nFix with:\n\n"
+            "    python3 scripts/suite-sync.py --push\n"
         )
-        if "plan" in layers:
-            print("Plans are exported from the portal:\n\n    python3 scripts/suite-sync.py --refresh-plans\n")
-        if layers - {"plan"}:
-            print("Code is authored here:\n\n    python3 scripts/suite-sync.py --push\n")
     return 1
 
 

@@ -204,6 +204,18 @@ jobs:
         # `--target-url` creates a temporary environment for this run and
         # deletes it afterwards, so concurrent PRs never collide and no
         # environment budget is consumed.
+        #
+        # Auto-heal is deliberately NOT disabled here. A frontend test is
+        # executed by an agent against its plan, and the agent re-authors the
+        # generated selectors when it finds them stale; 17 of these 34 tests
+        # cannot replay verbatim at all, because their generated code names
+        # elements that never existed ("Load 4 label") or selects empty option
+        # values. Committing that code as the contract was a mistake this
+        # repository has since corrected: tests/ui/ holds the plans, which are
+        # what this gate is accountable to. The trade-off is stated in the
+        # README rather than hidden: a healed test can pass over a regression,
+        # which is why the exact assertions live in the API suite, where the
+        # code is authored and runs strict.
         run: |
           set -o pipefail
           testsprite test run --all \
@@ -350,6 +362,7 @@ jobs:
           set -o pipefail
           testsprite test run --all \
             --project "$API_PROJECT_ID" \
+            --no-auto-heal \
             --wait \
             --max-concurrency 4 \
             --timeout 900 \

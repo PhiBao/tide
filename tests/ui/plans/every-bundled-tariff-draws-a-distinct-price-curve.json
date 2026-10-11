@@ -20,7 +20,7 @@
     },
     {
       "type": "action",
-      "description": "Switch to 'Summer afternoon peak', then to 'Flat rate', waiting for each redraw."
+      "description": "Switch to 'Four-season peak', then to 'Flat rate', waiting for each redraw."
     },
     {
       "type": "assertion",

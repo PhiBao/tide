@@ -164,7 +164,11 @@ possible at all.
 
 ## The suite, honestly
 
-52 tests: 34 UI, 18 API. 111 Rust tests behind them.
+52 tests: 34 browser, 18 API. 111 Rust tests behind them.
+
+The two halves carry different weight, for a reason I only learned by
+measuring it — see "I committed a test suite that had never run" below. The
+API tests are the half whose green is their own.
 
 The 18 API tests are **authored, not generated**. I gave TestSprite a precise
 OpenAPI spec and it produced 40 tests asserting a contract that doesn't exist —
@@ -234,6 +238,56 @@ problem the moment I wrote it: one test existed only on the portal, so the
 repository was quietly missing part of the suite it claimed to carry. Nobody
 would have noticed. That is the point.
 
+## I committed a test suite that had never run
+
+After I fixed the drift, I did what the fix implied: I exported all 34 browser
+tests into the repository and bound each one to the id that executes it. Plans,
+code, the lot. The repository now described the whole suite, and a checker proved
+it on every pull request.
+
+Then I asked the suite a question I had not asked before: **does it pass on its
+own?**
+
+`testsprite test run --all --no-auto-heal` replays the stored code verbatim
+instead of letting the agent repair it. The answer was 17 of 34.
+
+The other seventeen fail on selectors for elements that have never existed in
+this application. They look for a textbox called `Load 4 label`. The app's loads
+are called `EV charger`, `Water heater` and `Dishwasher`, and there is no fourth.
+Several call `select_option("")` — selecting the option whose value is the empty
+string, which is to say, nothing.
+
+Those tests pass in CI because the agent working from the plan rewrites them on
+the way past. Every green browser run I had reported, I had read as *"the page
+does what the plan says."* What it actually said was *"an agent, given the plan
+and the page, was able to make a passing test out of them."* Those are different
+claims, and only one of them is about the page.
+
+I had done exactly what I spend the rest of this document telling you not to do:
+I shipped a green suite as evidence without asking what it was evidence *of*. The
+drift bug was a test running code I had not read. This one was worse — a test
+whose committed form has never run at all, described by me as the artefact that
+executes.
+
+So the binding changed to match reality rather than my description of it. The
+browser suite binds **plans** — the scenario design, which is what the runner is
+accountable to and what a reader can check. The API suite binds **code** —
+authored Python, never re-authored, and CI now passes `--no-auto-heal` on that
+job so the guarantee is mine rather than inherited.
+
+That leaves the honest position, which is in the README's limitations rather
+than buried here: **breadth comes from the browser suite, precision from the
+API suite.** A browser test that is re-authored at run time can pass over a
+regression, because the agent is repairing the test and a green verdict cannot
+tell you which one it repaired. The API tests cannot do that: eighteen of them,
+exact micro-dollar totals, running strict. That is the half whose green I will
+defend.
+
+The lesson is not "don't trust your tests". It is narrower and more useful:
+**a suite has a grammar, and you have to know which clause you are being told.**
+"Passes" can mean "the product is correct", or "the test can be made to pass".
+Both are printed in green. Only one of them is about your product.
+
 ## What I'd tell you if you're doing this
 
 1. **Reproduce against production before you change anything.** I would have
@@ -248,6 +302,10 @@ would have noticed. That is the point.
 5. **Check that the test that ran is the test you read.** Two copies are still
    one suite, and only one of them decides whether you may merge. If nothing
    proves they agree, assume they don't.
+6. **Ask which sense of "passes" you are being told.** A suite that repairs
+   itself as it runs prints the same green as one that does not. If you cannot
+   say which half of yours is which, run it strict once and find out. It took me
+   one command to learn that half of mine had never run.
 
 ## What's missing
 

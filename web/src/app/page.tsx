@@ -429,13 +429,15 @@ export default function Home() {
               </div>
 
               <div className="load-readout">
-                <div>{kwh(requirement)}</div>
+                <div data-testid={`energy-${load.id}`}>{kwh(requirement)}</div>
                 <small>by slot {load.deadline_slot}</small>
               </div>
 
               <div className="load-readout power">
                 <div>{(load.max_power_w / 1000).toFixed(1)} kW</div>
-                <small>{placement ? `${placement.slots.length} slots` : "—"}</small>
+                <small data-testid={`slots-${load.id}`}>
+                  {placement ? `${placement.slots.length} slots` : "—"}
+                </small>
               </div>
 
               <div className="load-actions">
@@ -642,23 +644,44 @@ export default function Home() {
 
       {history && history.summary.intervals > 0 && (
         <>
-          <div className="ranked">
+          <div className="ranked" data-testid="ranked">
             {history.ranked.map((entry, i) => {
               const cheapest = i === 0;
               const isCurrent = entry.tariff_id === tariffId;
+              // Deltas are stated as the difference between the two totals the
+              // reader can see, not between the exact underlying values.
+              // Rounding each figure on its own let the screen print
+              // "$0.68" and "$1.75" beside "an amount more" of "$1.08", so a
+              // reader who subtracted got a different answer from the page
+              // that asked to be checked. The exact deltas remain in the API
+              // response; this is a display decision, made in favour of the
+              // arithmetic adding up where it is shown.
+              const cents = (micro: number) => Math.round(micro / 10_000);
+              const moreMicro = (cents(entry.total_micro_usd) - cents(history.ranked[0].total_micro_usd)) * 10_000;
+              const current = history.ranked.find((row) => row.tariff_id === tariffId);
+              const vsCurrentMicro =
+                current === undefined
+                  ? null
+                  : (cents(entry.total_micro_usd) - cents(current.total_micro_usd)) * 10_000;
               return (
-                <div className={`ranked-row${cheapest ? " cheapest" : ""}`} key={entry.tariff_id}>
+                <div
+                  data-testid="ranked-row"
+                  className={`ranked-row${cheapest ? " cheapest" : ""}`}
+                  key={entry.tariff_id}
+                >
                   <div className="ranked-name">
-                    {cheapest && <span className="ranked-badge">cheapest</span>}
+                    {cheapest && (
+                      <span className="ranked-badge" data-testid="ranked-badge">
+                        cheapest
+                      </span>
+                    )}
                     <strong>{entry.tariff_name}</strong>
                     <small>{entry.tariff_id}</small>
                   </div>
                   <div className="ranked-cost">
                     <div>{usd(entry.total_micro_usd)}</div>
                     <small>
-                      {cheapest
-                        ? "the floor for this period"
-                        : `+${usd(entry.delta_vs_cheapest_micro_usd)} more`}
+                      {cheapest ? "the floor for this period" : `+${usd(moreMicro)} more`}
                     </small>
                   </div>
                   <div className="ranked-now">
@@ -666,10 +689,10 @@ export default function Home() {
                       <span className="ranked-current">you are on this</span>
                     ) : (
                       <small>
-                        {entry.delta_vs_current_micro_usd !== null &&
-                          `${
-                            entry.delta_vs_current_micro_usd > 0 ? "costs" : "saves"
-                          } ${usd(Math.abs(entry.delta_vs_current_micro_usd))}`}
+                        {vsCurrentMicro !== null &&
+                          `${vsCurrentMicro > 0 ? "costs" : "saves"} ${usd(
+                            Math.abs(vsCurrentMicro),
+                          )}`}
                       </small>
                     )}
                   </div>
@@ -677,7 +700,7 @@ export default function Home() {
               );
             })}
           </div>
-          <p className="panel-note" style={{ marginTop: 12 }}>
+          <p className="panel-note" data-testid="ranked-summary" style={{ marginTop: 12 }}>
             {history.summary.intervals} intervals · {kwh(history.summary.total_import_wh)} ·{" "}
             {history.summary.days_covered} day{history.summary.days_covered === 1 ? "" : "s"} ·
             mean {kwh(history.summary.mean_import_wh)} per interval
@@ -697,7 +720,9 @@ export default function Home() {
           <div className="outcome">
             <div>
               <div className="saving-label">Saving versus running it as you do now</div>
-              <div className="saving">{usd(monthly, 2)}</div>
+              <div className="saving" data-testid="saving">
+                {usd(monthly, 2)}
+              </div>
               <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 4 }}>
                 per month · {usd(saving)} today
               </div>
@@ -705,11 +730,12 @@ export default function Home() {
 
             <div>
               <span
+                data-testid="certificate"
                 className={`certificate ${solution.optimality === "Proved" ? "proved" : "heuristic"}`}
               >
                 {solution.optimality === "Proved" ? "✓ proved optimal" : "≈ bounded search"}
               </span>
-              <div className="outcome-note">
+              <div className="outcome-note" data-testid="certificate-note">
                 {solution.optimality === "Proved"
                   ? `This schedule costs exactly the theoretical floor, so no cheaper schedule exists. Bound ${usd(solution.lower_bound_micro_usd)}, actual ${usd(solution.schedule.cost_micro_usd)}.`
                   : `${(solution.gap_percent_x1000 / 1000).toFixed(3)}% above the theoretical floor. ${solution.diagnostics[0] ?? ""}`}
@@ -721,7 +747,9 @@ export default function Home() {
             <div className="bill">
               <div className="bill-head">
                 <h3>Scheduled</h3>
-                <div className="bill-total">{usd(bills.scheduled.total_micro_usd)}</div>
+                <div className="bill-total" data-testid="scheduled-total">
+                  {usd(bills.scheduled.total_micro_usd)}
+                </div>
               </div>
               <BillTable bill={bills.scheduled} expanded={expandedLine} setId={setExpandedLine} prefix="sched" />
             </div>

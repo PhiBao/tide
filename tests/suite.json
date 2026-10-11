@@ -1,5 +1,5 @@
 {
-  "note": "Binds each test in this repository to the TestSprite test that executes it. The repository is the source of truth; the portal is the runner. scripts/suite-sync.py proves the two agree, in both directions, for both suites.",
+  "note": "Binds each test in this repository to the TestSprite test that executes it. The repository is the source of truth; the portal is the runner. scripts/suite-sync.py proves the two agree, in both directions. The API suite binds authored code; the UI suite binds plans, because frontend tests are executed by an agent against the plan and their stored code is rewritten whenever the agent finds it stale.",
   "suites": [
     {
       "key": "api",
@@ -105,211 +105,177 @@
       "project_id": "949b0571-9a72-473c-945e-7168e929f6a6",
       "project_name": "Tide web",
       "dir": "tests/ui",
-      "kind": "plan+code",
+      "kind": "plan",
       "tests": [
         {
           "test_id": "4fb8257e-bbef-4dd6-b6ce-d6060672af31",
           "name": "A long load label does not break the row",
-          "plan": "plans/a-long-load-label-does-not-break-the-row.json",
-          "code": "code/a-long-load-label-does-not-break-the-row.py"
+          "plan": "plans/a-long-load-label-does-not-break-the-row.json"
         },
         {
           "test_id": "8f585523-00ce-4c45-91d0-7800d758dae5",
           "name": "A rejected usage import explains itself",
-          "plan": "plans/a-rejected-usage-import-explains-itself.json",
-          "code": "code/a-rejected-usage-import-explains-itself.py"
+          "plan": "plans/a-rejected-usage-import-explains-itself.json"
         },
         {
           "test_id": "6020dbfc-9f2c-4386-8e6f-03570772b52a",
           "name": "Add a household load before solving",
-          "plan": "plans/add-a-household-load-before-solving.json",
-          "code": "code/add-a-household-load-before-solving.py"
+          "plan": "plans/add-a-household-load-before-solving.json"
         },
         {
           "test_id": "c42f4bb9-8c97-483a-a6c3-70887c210d38",
           "name": "Add a load and review the optimized result",
-          "plan": "plans/add-a-load-and-review-the-optimized-result.json",
-          "code": "code/add-a-load-and-review-the-optimized-result.py"
+          "plan": "plans/add-a-load-and-review-the-optimized-result.json"
         },
         {
           "test_id": "d6a5f1fa-d7a0-4f33-916d-63880309d429",
           "name": "Add a new household load",
-          "plan": "plans/add-a-new-household-load.json",
-          "code": "code/add-a-new-household-load.py"
+          "plan": "plans/add-a-new-household-load.json"
         },
         {
           "test_id": "99537b19-ebf3-4ed5-a518-1ab8f8e9bffc",
           "name": "Adding and removing a load re-solves the schedule",
-          "plan": "plans/adding-and-removing-a-load-re-solves-the-schedule.json",
-          "code": "code/adding-and-removing-a-load-re-solves-the-schedule.py"
+          "plan": "plans/adding-and-removing-a-load-re-solves-the-schedule.json"
         },
         {
           "test_id": "e4df2025-424c-4a62-95cd-3f91cdff6f17",
           "name": "An empty load list is handled without a crash or an invented schedule",
-          "plan": "plans/an-empty-load-list-is-handled-without-a-crash-or-an-invented.json",
-          "code": "code/an-empty-load-list-is-handled-without-a-crash-or-an-invented.py"
+          "plan": "plans/an-empty-load-list-is-handled-without-a-crash-or-an-invented.json"
         },
         {
           "test_id": "54c7646c-23ba-4073-b7a5-ab153a19a053",
           "name": "Each load readout is fully readable",
-          "plan": "plans/each-load-readout-is-fully-readable.json",
-          "code": "code/each-load-readout-is-fully-readable.py"
+          "plan": "plans/each-load-readout-is-fully-readable.json"
         },
         {
           "test_id": "59c04d76-35bc-4780-8f33-d273cf1ffc0b",
           "name": "Each load readout names what it shows",
-          "plan": "plans/each-load-readout-names-what-it-shows.json",
-          "code": "code/each-load-readout-names-what-it-shows.py"
+          "plan": "plans/each-load-readout-names-what-it-shows.json"
         },
         {
           "test_id": "c7839e75-cd58-45f5-9a76-4b5833a8a6b4",
           "name": "Every bundled tariff draws a distinct price curve",
-          "plan": "plans/every-bundled-tariff-draws-a-distinct-price-curve.json",
-          "code": "code/every-bundled-tariff-draws-a-distinct-price-curve.py"
+          "plan": "plans/every-bundled-tariff-draws-a-distinct-price-curve.json"
         },
         {
           "test_id": "508621be-b90c-42b0-a602-e0b2520b08f0",
           "name": "Expanding a bill line reveals the rule that produced it",
-          "plan": "plans/expanding-a-bill-line-reveals-the-rule-that-produced-it.json",
-          "code": "code/expanding-a-bill-line-reveals-the-rule-that-produced-it.py"
+          "plan": "plans/expanding-a-bill-line-reveals-the-rule-that-produced-it.json"
         },
         {
           "test_id": "972e29af-9f17-4f8f-beee-a1715dc2a237",
           "name": "Importing usage produces an exact bill",
-          "plan": "plans/importing-usage-produces-an-exact-bill.json",
-          "code": "code/importing-usage-produces-an-exact-bill.py"
+          "plan": "plans/importing-usage-produces-an-exact-bill.json"
         },
         {
           "test_id": "b8f8de37-23eb-4c1b-a149-2cc161ed4e88",
           "name": "Increase a load allocation",
-          "plan": "plans/increase-a-load-allocation.json",
-          "code": "code/increase-a-load-allocation.py"
+          "plan": "plans/increase-a-load-allocation.json"
         },
         {
           "test_id": "a80fe58a-5ac8-4b57-9932-d346cf759905",
           "name": "Increasing a load's energy re-solves the schedule",
-          "plan": "plans/increasing-a-load-s-energy-re-solves-the-schedule.json",
-          "code": "code/increasing-a-load-s-energy-re-solves-the-schedule.py"
+          "plan": "plans/increasing-a-load-s-energy-re-solves-the-schedule.json"
         },
         {
           "test_id": "88c671c1-7875-4ed8-996f-773662100521",
           "name": "No error surface appears during a normal session",
-          "plan": "plans/no-error-surface-appears-during-a-normal-session.json",
-          "code": "code/no-error-surface-appears-during-a-normal-session.py"
+          "plan": "plans/no-error-surface-appears-during-a-normal-session.json"
         },
         {
           "test_id": "60d8576a-a2f3-4dfb-b91e-814972aa10ff",
           "name": "Re-solve the schedule after changing loads",
-          "plan": "plans/re-solve-the-schedule-after-changing-loads.json",
-          "code": "code/re-solve-the-schedule-after-changing-loads.py"
+          "plan": "plans/re-solve-the-schedule-after-changing-loads.json"
         },
         {
           "test_id": "0b17ec8b-c930-43d6-88f7-5cb497520704",
           "name": "Recompute the schedule after changing the tariff",
-          "plan": "plans/recompute-the-schedule-after-changing-the-tariff.json",
-          "code": "code/recompute-the-schedule-after-changing-the-tariff.py"
+          "plan": "plans/recompute-the-schedule-after-changing-the-tariff.json"
         },
         {
           "test_id": "035decf6-4247-4650-86b0-b8e0f53b2f8b",
           "name": "Remove a household load",
-          "plan": "plans/remove-a-household-load.json",
-          "code": "code/remove-a-household-load.py"
+          "plan": "plans/remove-a-household-load.json"
         },
         {
           "test_id": "a6164182-fae1-402a-bac0-420d6db0c28d",
           "name": "Review load allocation across time slots",
-          "plan": "plans/review-load-allocation-across-time-slots.json",
-          "code": "code/review-load-allocation-across-time-slots.py"
+          "plan": "plans/review-load-allocation-across-time-slots.json"
         },
         {
           "test_id": "18623f19-db5b-4221-b1c8-8543390ae8a5",
           "name": "Review optimal schedule for the default tariff",
-          "plan": "plans/review-optimal-schedule-for-the-default-tariff.json",
-          "code": "code/review-optimal-schedule-for-the-default-tariff.py"
+          "plan": "plans/review-optimal-schedule-for-the-default-tariff.json"
         },
         {
           "test_id": "65761ca9-ec57-41fa-97f6-b68261f0b27a",
           "name": "Review scheduled versus running-now cost breakdown",
-          "plan": "plans/review-scheduled-versus-running-now-cost-breakdown.json",
-          "code": "code/review-scheduled-versus-running-now-cost-breakdown.py"
+          "plan": "plans/review-scheduled-versus-running-now-cost-breakdown.json"
         },
         {
           "test_id": "bfd284e2-cc95-49d9-88ef-7dc0e820b7be",
           "name": "Select a tariff and view the optimized schedule",
-          "plan": "plans/select-a-tariff-and-view-the-optimized-schedule.json",
-          "code": "code/select-a-tariff-and-view-the-optimized-schedule.py"
+          "plan": "plans/select-a-tariff-and-view-the-optimized-schedule.json"
         },
         {
           "test_id": "e821c94f-7eef-40e1-8f70-ac12391a366e",
           "name": "Start from the overnight tariff and confirm the optimized result",
-          "plan": "plans/start-from-the-overnight-tariff-and-confirm-the-optimized-re.json",
-          "code": "code/start-from-the-overnight-tariff-and-confirm-the-optimized-re.py"
+          "plan": "plans/start-from-the-overnight-tariff-and-confirm-the-optimized-re.json"
         },
         {
           "test_id": "4c5367b1-6fa3-48b2-b5ac-83553237f337",
           "name": "Storing the same usage twice does not double it",
-          "plan": "plans/storing-the-same-usage-twice-does-not-double-it.json",
-          "code": "code/storing-the-same-usage-twice-does-not-double-it.py"
+          "plan": "plans/storing-the-same-usage-twice-does-not-double-it.json"
         },
         {
           "test_id": "47a2c3e0-c366-4cf2-b7c5-dbce08b5926f",
           "name": "Storing usage ranks every tariff and names the cheapest",
-          "plan": "plans/storing-usage-ranks-every-tariff-and-names-the-cheapest.json",
-          "code": "code/storing-usage-ranks-every-tariff-and-names-the-cheapest.py"
+          "plan": "plans/storing-usage-ranks-every-tariff-and-names-the-cheapest.json"
         },
         {
           "test_id": "cca1786f-ffd6-44ff-8308-b5210d505193",
           "name": "Switch tariffs and re-run the scenario",
-          "plan": "plans/switch-tariffs-and-re-run-the-scenario.json",
-          "code": "code/switch-tariffs-and-re-run-the-scenario.py"
+          "plan": "plans/switch-tariffs-and-re-run-the-scenario.json"
         },
         {
           "test_id": "1811b433-1f07-45cf-a0cd-5b7d085a0001",
           "name": "Switch tariffs and review the managed load schedule",
-          "plan": "plans/switch-tariffs-and-review-the-managed-load-schedule.json",
-          "code": "code/switch-tariffs-and-review-the-managed-load-schedule.py"
+          "plan": "plans/switch-tariffs-and-review-the-managed-load-schedule.json"
         },
         {
           "test_id": "4495aef1-5405-4b5a-9506-839937a0c3f9",
           "name": "The + control steps the requirement and keeps the slot count consistent",
-          "plan": "plans/the-control-steps-the-requirement-and-keeps-the-slot-count-c.json",
-          "code": "code/the-control-steps-the-requirement-and-keeps-the-slot-count-c.py"
+          "plan": "plans/the-control-steps-the-requirement-and-keeps-the-slot-count-c.json"
         },
         {
           "test_id": "7e2395a9-89cb-464a-a516-e0b024d88165",
           "name": "The optimality certificate is visible and states its bound",
-          "plan": "plans/the-optimality-certificate-is-visible-and-states-its-bound.json",
-          "code": "code/the-optimality-certificate-is-visible-and-states-its-bound.py"
+          "plan": "plans/the-optimality-certificate-is-visible-and-states-its-bound.json"
         },
         {
           "test_id": "144bc845-6f3f-48ae-b2ce-74b8a6eb333c",
           "name": "The ribbon's clock agrees with the prices it shows",
-          "plan": "plans/the-ribbon-s-clock-agrees-with-the-prices-it-shows.json",
-          "code": "code/the-ribbon-s-clock-agrees-with-the-prices-it-shows.py"
+          "plan": "plans/the-ribbon-s-clock-agrees-with-the-prices-it-shows.json"
         },
         {
           "test_id": "ffbb043c-9958-461b-91ef-dbea9108d8e1",
           "name": "Verify component-level cost allocation in the outcome",
-          "plan": "plans/verify-component-level-cost-allocation-in-the-outcome.json",
-          "code": "code/verify-component-level-cost-allocation-in-the-outcome.py"
+          "plan": "plans/verify-component-level-cost-allocation-in-the-outcome.json"
         },
         {
           "test_id": "ded863bc-4880-4fcc-9a70-ca2dc3508c25",
           "name": "Verify outcome summary after optimization",
-          "plan": "plans/verify-outcome-summary-after-optimization.json",
-          "code": "code/verify-outcome-summary-after-optimization.py"
+          "plan": "plans/verify-outcome-summary-after-optimization.json"
         },
         {
           "test_id": "7946146b-9ff1-48b3-8c18-94959873a766",
           "name": "Verify scheduled versus current cost comparison",
-          "plan": "plans/verify-scheduled-versus-current-cost-comparison.json",
-          "code": "code/verify-scheduled-versus-current-cost-comparison.py"
+          "plan": "plans/verify-scheduled-versus-current-cost-comparison.json"
         },
         {
           "test_id": "8919d89f-08b9-4574-ac6d-08a043d6075c",
           "name": "View the default load inventory",
-          "plan": "plans/view-the-default-load-inventory.json",
-          "code": "code/view-the-default-load-inventory.py"
+          "plan": "plans/view-the-default-load-inventory.json"
         }
       ]
     }

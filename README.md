@@ -130,7 +130,7 @@ DNS-safe by construction and removes the guesswork.
 | Criterion | How Tide answers it |
 |---|---|
 | 40% Project Quality | A polished, deterministic app with deliberate loading, empty and error states; 111 Rust tests behind it (93 in the pure core, 18 over HTTP). Exact integer money throughout — no floats anywhere in the domain — so every figure on screen is reproducible by hand. |
-| 40% Tests That Run Themselves | **52 tests, all green.** 34 UI tests gating every PR against that PR's own preview, plus 18 authored API tests asserting exact micro-dollar totals. Coverage spans all four tariffs, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, the empty state, mobile row layout, and every failure mode. Both suites are committed here and bound to the ids that execute them (`tests/suite.json`), and CI proves the two copies agree *before* the suite runs — they drifted once, and a green run about code that never executed is worse than no run at all. The gate has already caught a real defect: [PR #2](https://github.com/PhiBao/tide/pull/2) went red, was diagnosed, fixed, and went 19/19 green. |
+| 40% Tests That Run Themselves | **52 tests, all green.** 34 browser tests gating every PR against that PR's own preview, plus 18 authored API tests asserting exact micro-dollar totals. Coverage spans all four tariffs, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, the empty state, mobile row layout, and every failure mode. The split is deliberate: **breadth from the browser suite, precision from the API suite.** The API tests are authored Python, never re-authored, and CI runs them strict (`--no-auto-heal`) so their green is their own. The browser suite is plan-driven — a judgement about how to drive the page rather than an assertion about it — and I measure that limit instead of hiding it: replayed verbatim, 17 of the 34 pass and 17 fail on generated selectors for elements that never existed. Both suites are committed and bound to the ids that run them (`tests/suite.json`); CI proves the two copies agree *before* the suite runs. The gate has caught a real defect: [PR #2](https://github.com/PhiBao/tide/pull/2) went red, was diagnosed, fixed, and went 19/19 green. |
 | 20% Innovation | The proof-backed optimiser is the whole product: a relaxation bound certifies optimality on any instance, and a brute-force oracle independently checks small ones — returning `null` rather than guessing when it cannot. No model, no heuristics, no confidence scores. Determinism is what makes the certificate possible, so the design refuses anything that would make it impossible. |
 | ∞ Engagement | The long-form write-up above, the failure bundles committed in the repo as evidence, and the bug that started it told properly rather than summarised. Written up during the window, not before it. |
 
@@ -337,6 +337,14 @@ assert on. There is no mock path anywhere in the codebase.
   single-day bill, and the tariff ranking are sections of one scrolling page.
   That is the right shape for one decision and the wrong shape for managing a
   year of them.
+- **Half the browser suite is re-authored as it runs.** TestSprite executes
+  frontend tests with an agent working from the plan, and the agent rewrites the
+  generated selectors when it finds them stale. Replayed verbatim, 17 of the 34
+  pass; the other 17 fail on selectors for elements that never existed. So a
+  green browser run cannot distinguish "the app works" from "the test was
+  repaired", and this is the one place where a pass is weaker evidence than it
+  looks. That is why the exact assertions live in the API suite, which is
+  authored code and runs strict.
 - **Aggregation is exact but unindexed.** `history_compare` reads every stored
   interval in the requested range and prices each tariff over all of them. That
   is fine for a year of one household and would want pre-aggregation before it
@@ -371,8 +379,8 @@ crates/api/      Axum router, shared by native tests and the Worker
 crates/worker/   Cloudflare Worker entrypoint (wasm32)
 web/             Next.js frontend, static export
 tests/           both suites: suite.json binds each test to the id that runs it
-                 backend/  18 authored API tests
-                 ui/       34 browser tests, each as a plan and as Playwright
+                 backend/  18 authored API tests (the code that runs)
+                 ui/       34 browser tests as plans (the code is a run artefact)
 scripts/         suite-sync.py: proves the committed suite is the suite that runs
 docs/diagrams/   architecture, proof loop, and PR-gate diagrams
 .github/         CI: fmt, clippy, test, preview deploy, TestSprite gate

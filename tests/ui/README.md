@@ -16,36 +16,57 @@ preview deployment, and this suite runs against that preview before the branch
 can merge — so a regression is caught on the branch that caused it, not after it
 reaches production.
 
-## What is in this directory, and why there are two layers
+## What is committed here, and what deliberately is not
 
-Each test has two artefacts, because a test on TestSprite is both a plan and a
-program:
+`plans/` holds one file per test: its steps in plain language, which is the
+scenario design and the thing a reader can check without reading code. That is
+the contract this suite is accountable to.
 
-- `plans/<slug>.json` — the steps, in plain language: what the test *was asked
-  to do*. This is the scenario design, and it is the part a reader can check
-  without reading code.
-- `code/<slug>.py` — the Playwright the runner actually executes: what the test
-  *does*, including every assertion and its expected value. This is where
-  assertion depth lives.
+**The generated code is not committed, and that is a finding rather than an
+omission.** Frontend tests on TestSprite are executed by an agent working from
+the plan, and when the agent finds the generated selectors stale it re-authors
+them. The stored code is therefore an output of a run, not an input to one.
 
-The plan is authored on TestSprite, so the copy here is an export and moves
-portal → repo. The code is authored here, so it moves repo → portal.
+There is a measured reason to treat it that way. Replaying all 34 tests
+verbatim — `testsprite test run --all --no-auto-heal` — passes **17 of 34**. The
+other 17 fail against code that names elements which have never existed in this
+application (`Load 4 label`; the real labels are `EV charger`, `Water heater`,
+`Dishwasher`) or calls `select_option("")` with no option. Those tests pass in
+CI because the agent repairs them on the way past.
 
-## These files are the executed artefact, not documentation
+I committed that code once, exported from the portal, and described it as *the
+artefact that executes*. That was wrong, and the way it was wrong is worth
+stating: it was a description of a suite that had never run in that form. A
+strict replay is what exposed it — a check that asked whether the committed
+suite passes **on its own** answered 17/34.
 
-Editing a file here does not change what runs. `scripts/suite-sync.py` proves
-that every file here matches what the portal holds, in both directions, and CI
-runs it before this suite runs — a pull request that edits a test without
-sending the edit on fails at that step rather than reporting a green run about
-code that never executed.
+## The consequence, stated plainly
+
+A frontend test that is re-authored at run time can pass over a regression: the
+agent is repairing the test, not the application, and a green verdict cannot
+distinguish the two. That is a real limit of this half of the suite.
+
+It is bounded by the other half. The 18 API tests are authored Python, never
+re-authored — *"code you wrote yourself is never re-authored"* — and CI passes
+`--no-auto-heal` on that job so the guarantee is explicit rather than inherited.
+They assert exact micro-dollar totals. Breadth comes from these 34; precision
+comes from those 18.
+
+## Checking that the committed suite is the suite that runs
+
+`tests/suite.json` binds every test here to the id that executes it, and
+`scripts/suite-sync.py` verifies it in both directions for both suites: every
+committed artefact must match what the portal holds, and every test on the
+portal must be committed here. CI runs that check *before* the suite does.
 
 ```bash
-python3 scripts/suite-sync.py                # check both suites
-python3 scripts/suite-sync.py --push         # send this repo's code to the portal
-python3 scripts/suite-sync.py --refresh-plans  # re-export the portal's plans
+python3 scripts/suite-sync.py                  # check both suites
+python3 scripts/suite-sync.py --push           # send this repo's version, plans and code
+python3 scripts/suite-sync.py --refresh-plans  # re-export plans the portal regenerated
 ```
 
-That check exists because the two copies drifted once, silently. A fix landed
-here while the portal kept running the previous version, and the only symptom
-was a red CI run whose reported cause — "idempotency is not working" — was not
-the real one. Nothing was wrong with idempotency. The old test was running.
+The check exists because the two copies drifted once, silently. A fix landed in
+the repository while the portal kept running the previous version, and the only
+symptom was a red CI run whose reported cause — *idempotency is not working* —
+was not the real one. Nothing was wrong with idempotency. The old test was
+running.
