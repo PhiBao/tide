@@ -326,6 +326,6 @@ And the suite still has a hole. A user found the `+` button. There may be more.
 
 ---
 
-*Tide is Rust + Cloudflare Workers + Next.js, MIT OR Apache-2.0. The repo
-carries the failure bundle from the bug that started this, and the PR that
-closed it.*
+*Tide is Rust + Cloudflare Workers + Next.js, MIT OR Apache-2.0. The PR that
+closed the bug carries the evidence: [PR #2](https://github.com/PhiBao/tide/pull/2)
+has the red run on its checks tab, and the commit that took it to 19/19 green.*
