@@ -207,10 +207,9 @@ jobs:
         #
         # Auto-heal is deliberately NOT disabled here. A frontend test is
         # executed by an agent against its plan, and the agent re-authors the
-        # generated selectors when it finds them stale; 17 of these 34 tests
-        # cannot replay verbatim at all, because their generated code names
-        # elements that never existed ("Load 4 label") or selects empty option
-        # values. Committing that code as the contract was a mistake this
+        # generated selectors when it finds them stale; 12 of these 34 tests cannot
+        # replay verbatim at all, because their generated code names elements the
+        # application does not have, or selects empty option values. Committing that code as the contract was a mistake this
         # repository has since corrected: tests/ui/ holds the plans, which are
         # what this gate is accountable to. The trade-off is stated in the
         # README rather than hidden: a healed test can pass over a regression,

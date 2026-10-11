@@ -1,6 +1,6 @@
 {
   "name": "Recompute the schedule after changing the tariff",
-  "test_id": "0b17ec8b-c930-43d6-88f7-5cb497520704",
+  "test_id": "c065ecff-5b92-4bde-a9b2-d369d05c1607",
   "planSteps": [
     {
       "type": "action",

@@ -108,172 +108,172 @@
       "kind": "plan",
       "tests": [
         {
-          "test_id": "4fb8257e-bbef-4dd6-b6ce-d6060672af31",
+          "test_id": "e7d886fa-ff52-4db3-a31e-a60c66ce3b86",
           "name": "A long load label does not break the row",
           "plan": "plans/a-long-load-label-does-not-break-the-row.json"
         },
         {
-          "test_id": "8f585523-00ce-4c45-91d0-7800d758dae5",
+          "test_id": "793ebbb0-c3bc-4be5-bbae-6e968a19b8a9",
           "name": "A rejected usage import explains itself",
           "plan": "plans/a-rejected-usage-import-explains-itself.json"
         },
         {
-          "test_id": "6020dbfc-9f2c-4386-8e6f-03570772b52a",
+          "test_id": "7a595fbc-6605-413f-8988-507256a55478",
           "name": "Add a household load before solving",
           "plan": "plans/add-a-household-load-before-solving.json"
         },
         {
-          "test_id": "c42f4bb9-8c97-483a-a6c3-70887c210d38",
+          "test_id": "432e60bf-a9cc-4b7d-863c-028445e33222",
           "name": "Add a load and review the optimized result",
           "plan": "plans/add-a-load-and-review-the-optimized-result.json"
         },
         {
-          "test_id": "d6a5f1fa-d7a0-4f33-916d-63880309d429",
+          "test_id": "203f8dee-7f91-4665-b2a6-9c1e6eeae6c3",
           "name": "Add a new household load",
           "plan": "plans/add-a-new-household-load.json"
         },
         {
-          "test_id": "99537b19-ebf3-4ed5-a518-1ab8f8e9bffc",
+          "test_id": "9644e529-206e-4610-8add-e65500c64b55",
           "name": "Adding and removing a load re-solves the schedule",
           "plan": "plans/adding-and-removing-a-load-re-solves-the-schedule.json"
         },
         {
-          "test_id": "e4df2025-424c-4a62-95cd-3f91cdff6f17",
+          "test_id": "b0657e90-2e65-448d-99d9-a543ae1399f6",
           "name": "An empty load list is handled without a crash or an invented schedule",
           "plan": "plans/an-empty-load-list-is-handled-without-a-crash-or-an-invented.json"
         },
         {
-          "test_id": "54c7646c-23ba-4073-b7a5-ab153a19a053",
+          "test_id": "e59fcc7e-5808-4bc5-a04e-53a2c7dd968b",
           "name": "Each load readout is fully readable",
           "plan": "plans/each-load-readout-is-fully-readable.json"
         },
         {
-          "test_id": "59c04d76-35bc-4780-8f33-d273cf1ffc0b",
+          "test_id": "3359f680-f0cc-409a-a2f0-dfed9519f140",
           "name": "Each load readout names what it shows",
           "plan": "plans/each-load-readout-names-what-it-shows.json"
         },
         {
-          "test_id": "c7839e75-cd58-45f5-9a76-4b5833a8a6b4",
+          "test_id": "f6678318-0cd5-4cf3-8c97-4f2eeda87566",
           "name": "Every bundled tariff draws a distinct price curve",
           "plan": "plans/every-bundled-tariff-draws-a-distinct-price-curve.json"
         },
         {
-          "test_id": "508621be-b90c-42b0-a602-e0b2520b08f0",
+          "test_id": "786e4ab8-14d8-46cb-bf87-02783c011ce3",
           "name": "Expanding a bill line reveals the rule that produced it",
           "plan": "plans/expanding-a-bill-line-reveals-the-rule-that-produced-it.json"
         },
         {
-          "test_id": "972e29af-9f17-4f8f-beee-a1715dc2a237",
+          "test_id": "9f36398c-28fa-4bd0-9443-6d6862321820",
           "name": "Importing usage produces an exact bill",
           "plan": "plans/importing-usage-produces-an-exact-bill.json"
         },
         {
-          "test_id": "b8f8de37-23eb-4c1b-a149-2cc161ed4e88",
+          "test_id": "0bb7aab0-b555-44f6-bdbe-2812e85329a0",
           "name": "Increase a load allocation",
           "plan": "plans/increase-a-load-allocation.json"
         },
         {
-          "test_id": "a80fe58a-5ac8-4b57-9932-d346cf759905",
+          "test_id": "862e237e-1d76-472e-91f1-cb13f0d7f56f",
           "name": "Increasing a load's energy re-solves the schedule",
           "plan": "plans/increasing-a-load-s-energy-re-solves-the-schedule.json"
         },
         {
-          "test_id": "88c671c1-7875-4ed8-996f-773662100521",
+          "test_id": "6348b9f1-a57f-49ea-abf0-5d4fc19cb0ad",
           "name": "No error surface appears during a normal session",
           "plan": "plans/no-error-surface-appears-during-a-normal-session.json"
         },
         {
-          "test_id": "60d8576a-a2f3-4dfb-b91e-814972aa10ff",
+          "test_id": "89839a68-a1f3-44ca-a9ce-5b794635122f",
           "name": "Re-solve the schedule after changing loads",
           "plan": "plans/re-solve-the-schedule-after-changing-loads.json"
         },
         {
-          "test_id": "0b17ec8b-c930-43d6-88f7-5cb497520704",
+          "test_id": "c065ecff-5b92-4bde-a9b2-d369d05c1607",
           "name": "Recompute the schedule after changing the tariff",
           "plan": "plans/recompute-the-schedule-after-changing-the-tariff.json"
         },
         {
-          "test_id": "035decf6-4247-4650-86b0-b8e0f53b2f8b",
+          "test_id": "d75cfcc8-6860-42f7-94bb-c3418e25845e",
           "name": "Remove a household load",
           "plan": "plans/remove-a-household-load.json"
         },
         {
-          "test_id": "a6164182-fae1-402a-bac0-420d6db0c28d",
+          "test_id": "59a1455b-2f5a-487e-abe6-29f3851d7579",
           "name": "Review load allocation across time slots",
           "plan": "plans/review-load-allocation-across-time-slots.json"
         },
         {
-          "test_id": "18623f19-db5b-4221-b1c8-8543390ae8a5",
+          "test_id": "abc807b0-0be2-40cd-91f8-544c07e16f25",
           "name": "Review optimal schedule for the default tariff",
           "plan": "plans/review-optimal-schedule-for-the-default-tariff.json"
         },
         {
-          "test_id": "65761ca9-ec57-41fa-97f6-b68261f0b27a",
+          "test_id": "c8d45455-b0e4-4e42-b3f7-884f84497a74",
           "name": "Review scheduled versus running-now cost breakdown",
           "plan": "plans/review-scheduled-versus-running-now-cost-breakdown.json"
         },
         {
-          "test_id": "bfd284e2-cc95-49d9-88ef-7dc0e820b7be",
+          "test_id": "9a3a5dbd-a6b1-4ab3-854d-728a16016a0e",
           "name": "Select a tariff and view the optimized schedule",
           "plan": "plans/select-a-tariff-and-view-the-optimized-schedule.json"
         },
         {
-          "test_id": "e821c94f-7eef-40e1-8f70-ac12391a366e",
+          "test_id": "253848a2-4a07-4400-be99-d41561d4faf9",
           "name": "Start from the overnight tariff and confirm the optimized result",
           "plan": "plans/start-from-the-overnight-tariff-and-confirm-the-optimized-re.json"
         },
         {
-          "test_id": "4c5367b1-6fa3-48b2-b5ac-83553237f337",
+          "test_id": "5184c520-b02c-4d7d-b6ea-ac76148c7642",
           "name": "Storing the same usage twice does not double it",
           "plan": "plans/storing-the-same-usage-twice-does-not-double-it.json"
         },
         {
-          "test_id": "47a2c3e0-c366-4cf2-b7c5-dbce08b5926f",
+          "test_id": "ae605bf0-a723-45c5-b1ae-c0e93591f2dc",
           "name": "Storing usage ranks every tariff and names the cheapest",
           "plan": "plans/storing-usage-ranks-every-tariff-and-names-the-cheapest.json"
         },
         {
-          "test_id": "cca1786f-ffd6-44ff-8308-b5210d505193",
+          "test_id": "6b23307d-e250-4961-942c-60f114740f34",
           "name": "Switch tariffs and re-run the scenario",
           "plan": "plans/switch-tariffs-and-re-run-the-scenario.json"
         },
         {
-          "test_id": "1811b433-1f07-45cf-a0cd-5b7d085a0001",
+          "test_id": "7a523f24-2420-483f-9c7e-bd543994740c",
           "name": "Switch tariffs and review the managed load schedule",
           "plan": "plans/switch-tariffs-and-review-the-managed-load-schedule.json"
         },
         {
-          "test_id": "4495aef1-5405-4b5a-9506-839937a0c3f9",
+          "test_id": "80db1a9f-aaf5-4b30-9f4c-abb2bffaaae4",
           "name": "The + control steps the requirement and keeps the slot count consistent",
           "plan": "plans/the-control-steps-the-requirement-and-keeps-the-slot-count-c.json"
         },
         {
-          "test_id": "7e2395a9-89cb-464a-a516-e0b024d88165",
+          "test_id": "b83b39ae-6481-42cb-87e4-9b2701581f4a",
           "name": "The optimality certificate is visible and states its bound",
           "plan": "plans/the-optimality-certificate-is-visible-and-states-its-bound.json"
         },
         {
-          "test_id": "144bc845-6f3f-48ae-b2ce-74b8a6eb333c",
+          "test_id": "f9f1fe43-047e-4faf-bda6-1f80a5bb2b13",
           "name": "The ribbon's clock agrees with the prices it shows",
           "plan": "plans/the-ribbon-s-clock-agrees-with-the-prices-it-shows.json"
         },
         {
-          "test_id": "ffbb043c-9958-461b-91ef-dbea9108d8e1",
+          "test_id": "0aac6733-9f81-448f-bf9c-471fa7312a8c",
           "name": "Verify component-level cost allocation in the outcome",
           "plan": "plans/verify-component-level-cost-allocation-in-the-outcome.json"
         },
         {
-          "test_id": "ded863bc-4880-4fcc-9a70-ca2dc3508c25",
+          "test_id": "3bb98d3b-31e0-4425-bbed-db03b8e63913",
           "name": "Verify outcome summary after optimization",
           "plan": "plans/verify-outcome-summary-after-optimization.json"
         },
         {
-          "test_id": "7946146b-9ff1-48b3-8c18-94959873a766",
+          "test_id": "f2055e0e-ec83-45ba-ae55-5c0c2c098fe6",
           "name": "Verify scheduled versus current cost comparison",
           "plan": "plans/verify-scheduled-versus-current-cost-comparison.json"
         },
         {
-          "test_id": "8919d89f-08b9-4574-ac6d-08a043d6075c",
+          "test_id": "e24e88a7-e5bd-4c11-a878-a886b9bd8cd6",
           "name": "View the default load inventory",
           "plan": "plans/view-the-default-load-inventory.json"
         }

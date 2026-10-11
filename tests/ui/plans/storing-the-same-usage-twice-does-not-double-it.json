@@ -1,22 +1,22 @@
 {
   "name": "Storing the same usage twice does not double it",
-  "test_id": "4c5367b1-6fa3-48b2-b5ac-83553237f337",
+  "test_id": "5184c520-b02c-4d7d-b6ea-ac76148c7642",
   "planSteps": [
     {
       "type": "action",
-      "description": "Open the app, wait for the initial solve, and click 'Use a sample'."
+      "description": "Open the app, wait for the initial solve, and click 'Use a sample' in the 'Your own usage' section."
     },
     {
       "type": "action",
-      "description": "Click 'Store and rank' and wait, then note the total energy shown beneath the ranked list."
+      "description": "Click 'Store and rank' and wait, then note the total energy reported beneath the ranked tariff list."
     },
     {
       "type": "action",
-      "description": "Click 'Store and rank' a second time with the same textarea contents and wait."
+      "description": "Click 'Store and rank' a second time with the same contents and wait, then note the total energy again."
     },
     {
       "type": "assertion",
-      "description": "Verify the total energy shown beneath the ranked list is the SAME as before, not doubled, and that a note appears saying intervals were already stored so nothing was duplicated."
+      "description": "Verify the total energy beneath the ranked list is the same after the second press as after the first, and is not doubled, and that a note appears saying intervals were already stored so nothing was duplicated."
     },
     {
       "type": "action",
@@ -24,11 +24,7 @@
     },
     {
       "type": "assertion",
-      "description": "Verify the ranked list is cleared and a note reports how many intervals were removed."
-    },
-    {
-      "type": "assertion",
-      "description": "Verify the section states that nothing is stored yet, rather than showing an empty or stale ranking."
+      "description": "Verify the 'Which tariff should you be on?' section reports that nothing is stored yet and a note states how many intervals were removed. The Outcome panel above belongs to the schedule rather than to stored usage, so it is not expected to change and must not be read as stale."
     }
   ]
 }

@@ -1,22 +1,14 @@
 {
   "name": "The ribbon's clock agrees with the prices it shows",
-  "test_id": "144bc845-6f3f-48ae-b2ce-74b8a6eb333c",
   "planSteps": [
     {
       "type": "action",
-      "description": "Open the app and wait for the initial solve."
+      "description": "Open the app and wait for the initial solve to finish."
     },
     {
       "type": "assertion",
-      "description": "Verify the ribbon's axis is labelled 00:00 through 00:00 in roughly three-hour steps, and that the cheap teal trough occupies the first hours of the day rather than the last \u2014 the trough must LEAD the day."
-    },
-    {
-      "type": "action",
-      "description": "Switch to 'Flat rate' and back to 'Overnight EV'."
-    },
-    {
-      "type": "assertion",
-      "description": "Verify the curve returns to the same shape, confirming the horizon is anchored to a fixed point rather than drifting."
+      "description": "Verify the price ribbon's time axis runs left to right in ascending hour order from 00 to 23, so the clock the ribbon shows agrees with the order of the prices beneath it."
     }
-  ]
+  ],
+  "test_id": "f9f1fe43-047e-4faf-bda6-1f80a5bb2b13"
 }

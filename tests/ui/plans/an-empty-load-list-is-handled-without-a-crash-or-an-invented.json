@@ -1,6 +1,6 @@
 {
   "name": "An empty load list is handled without a crash or an invented schedule",
-  "test_id": "e4df2025-424c-4a62-95cd-3f91cdff6f17",
+  "test_id": "b0657e90-2e65-448d-99d9-a543ae1399f6",
   "planSteps": [
     {
       "type": "action",

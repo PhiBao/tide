@@ -1,6 +1,6 @@
 {
   "name": "Verify scheduled versus current cost comparison",
-  "test_id": "7946146b-9ff1-48b3-8c18-94959873a766",
+  "test_id": "f2055e0e-ec83-45ba-ae55-5c0c2c098fe6",
   "planSteps": [
     {
       "type": "action",

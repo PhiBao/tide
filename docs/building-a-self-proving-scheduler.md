@@ -251,11 +251,17 @@ own?**
 `testsprite test run --all --no-auto-heal` replays the stored code verbatim
 instead of letting the agent repair it. The answer was 17 of 34.
 
-The other seventeen fail on selectors for elements that have never existed in
-this application. They look for a textbox called `Load 4 label`. The app's loads
+So I deleted all 34 and regenerated them from the plans, against the
+application as it stands. The regenerated suite passes **22 of 34** strict.
+Regeneration helped — 17 to 22 — and did not remove the dependency. A third of
+the browser suite still needs an agent before it can run at all, and the figure
+that matters is not the one that improved.
+
+In that first generation the other seventeen failed on selectors for elements
+that have never existed here. They looked for a textbox called `Load 4 label`. The app's loads
 are called `EV charger`, `Water heater` and `Dishwasher`, and there is no fourth.
-Several call `select_option("")` — selecting the option whose value is the empty
-string, which is to say, nothing.
+Several called `select_option("")` — selecting the option whose value is the
+empty string, which is to say, nothing.)
 
 Those tests pass in CI because the agent working from the plan rewrites them on
 the way past. Every green browser run I had reported, I had read as *"the page
