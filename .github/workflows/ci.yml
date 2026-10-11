@@ -121,6 +121,13 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         working-directory: crates/worker
+        # `--ignore-defaults` is load-bearing, not a preference. Without it the
+        # Previews service applies its own settings instead of the bindings in
+        # wrangler.toml, and a preview comes up with no database at all. The
+        # frontend still serves, so the smoke probe passed, and the failure
+        # surfaced only as two browser tests reporting "persistence is not
+        # configured for this deployment" -- which was the truth about the
+        # deployment and not about the branch.
         run: |
           set -o pipefail
 
@@ -129,7 +136,7 @@ jobs:
           # jq can read it. Feeding the raw output to jq fails with
           # "Invalid numeric literal" on the banner, which is a parsing problem
           # and not an API one — the two are reported separately below.
-          if ! raw="$(npx wrangler preview --name "pr-${{ github.event.pull_request.number }}" --json 2>&1)"; then
+          if ! raw="$(npx wrangler preview --name "pr-${{ github.event.pull_request.number }}" --ignore-defaults --json 2>&1)"; then
             printf '%s\n' "$raw"
             echo "::error title=Preview failed::wrangler could not create a preview for this PR."
             echo "::error::CLOUDFLARE_API_TOKEN must be an Account API token with the"\
@@ -163,6 +170,20 @@ jobs:
           done
           echo "preview did not become healthy" >&2
           exit 1
+
+      - name: Probe the store
+        env:
+          URL: ${{ steps.mint.outputs.url }}
+        # A preview that cannot persist cannot exercise the history endpoints,
+        # so the gate would be measuring a smaller application than the one
+        # users get. Probed here, where a failure costs no credits, rather than
+        # letting two browser tests spend them finding out.
+        run: |
+          curl --fail --show-error --silent -X POST "$URL/api/history/compare" \
+            -H 'content-type: application/json' \
+            -H 'X-Tide-Session: preview-probe' \
+            -d '{"from_epoch_minutes":0,"to_epoch_minutes":9999999999}' \
+            | head -c 200
 
   # -------------------------------------------------------------------------
   # TestSprite: run the suite against this PR's preview. This is the blocking

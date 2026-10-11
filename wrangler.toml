@@ -45,16 +45,19 @@ enabled = true
 [env.preview]
 name = "tide-preview"
 
-# Bindings are NOT inherited by an environment. `wrangler preview` builds a
-# branch deployment from this environment, so before this block existed every
-# pull request's preview ran without a database at all: the frontend served
-# fine and the history endpoints answered "persistence is not configured for
-# this deployment". Two effects, both bad. The newest feature could not be
-# tested on a preview, and the per-PR gate was red on every pull request --
-# a gate that cannot go green is not a gate.
+# Bindings are NOT inherited by an environment, and `wrangler preview` builds a
+# branch deployment without them unless it is told to use this file's settings.
+# Before either of those was understood, every pull request's preview ran with
+# no database: the frontend served fine, the smoke probe passed, and the only
+# symptom was two browser tests reporting "persistence is not configured for
+# this deployment". That message was true, and it was about the deployment
+# rather than the branch.
 #
-# A separate database rather than the production one, so a preview writes to
-# its own store and a broken branch cannot touch real data.
+# The CI preview path passes `--ignore-defaults`, which makes it use the
+# top-level binding below and write to the production store (partitioned per
+# browser session, as everything else is). This block is for invoking the
+# environment directly, with `--env preview`, and gives it a database of its
+# own so a preview run can never touch real data.
 [[env.preview.d1_databases]]
 binding = "tide"
 database_name = "tide-preview"
