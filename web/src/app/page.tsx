@@ -724,7 +724,7 @@ export default function Home() {
                 {usd(monthly, 2)}
               </div>
               <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 4 }}>
-                per month · {usd(saving)} today
+                per month, if every day looked like this · {usd(saving)} today
               </div>
             </div>
 

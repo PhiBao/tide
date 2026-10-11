@@ -345,6 +345,10 @@ assert on. There is no mock path anywhere in the codebase.
   repaired", and this is the one place where a pass is weaker evidence than it
   looks. That is why the exact assertions live in the API suite, which is
   authored code and runs strict.
+- **The monthly figure extrapolates a single modelled day.** The Outcome panel
+  multiplies one day's saving by thirty, and now says so rather than presenting
+  the result as a bill you would receive. A real month has a different mix of
+  days, and a different mix of weather.
 - **Aggregation is exact but unindexed.** `history_compare` reads every stored
   interval in the requested range and prices each tariff over all of them. That
   is fine for a year of one household and would want pre-aggregation before it
