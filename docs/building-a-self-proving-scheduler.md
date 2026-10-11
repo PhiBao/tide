@@ -57,7 +57,7 @@ was accurate enough to have written the fix from:
 > or the resulting state change is not propagating to the displayed energy, slot
 > count, and schedule calculations."*
 
-Which is the actual bug, found independently, from a failure bundle.
+Which is the actual bug, reported independently by the failing run's own analysis.
 
 ## The app this happened in
 
