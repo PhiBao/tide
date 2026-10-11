@@ -323,6 +323,10 @@ jobs:
     needs: deploy
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      # Needed now that the suite is committed here: the sync check below reads
+      # it from the working tree rather than trusting the portal.
+      - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
