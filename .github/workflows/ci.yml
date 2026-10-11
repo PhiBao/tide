@@ -123,11 +123,15 @@ jobs:
         working-directory: crates/worker
         # A real deployment to a PR-scoped Worker name.
         #
-        # The browser tests that need a store are NOT here: a preview carries no
-        # D1 binding, so /api/history/* answers "persistence is not configured
-        # for this deployment" on every one. Those three live in their own
-        # TestSprite project and run against production, which is what this job
-        # is for. Everything left here is a test a preview can actually host.
+        # A real Worker deploy rather than a Preview deployment, because a
+        # Preview deployment does not carry the D1 binding from wrangler.toml --
+        # both flags that look like the fix are accepted and neither helps.
+        #
+        # The three browser tests that need a store still run against
+        # production, in their own TestSprite project, beside the API suite.
+        # That is a scoping choice rather than a necessity now that this job
+        # deploys properly: it keeps the gate fast and exercises storage against
+        # a real deployment. Everything here is a test a preview can host.
         #
         # The URL is scraped rather than parsed from JSON because `wrangler
         # deploy` has no --json output. Each PR leaves one Worker behind
