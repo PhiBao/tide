@@ -398,6 +398,72 @@ better production values. A failure report is a hypothesis. This one was accurat
 about what it saw and wrong about why it mattered, and the difference only showed
 up when I ran the four steps myself.
 
+## The build tool disappeared mid-week
+
+Halfway through wiring the pull-request gate, every preview deployment started
+failing before it reached the tests:
+
+```
+error: failed to compile `worker-build v0.8.7`
+  failed to select a version for the requirement `zip = "^2.1.3"`
+  version 2.1.3 is yanked ... version 2.6.1 is yanked
+```
+
+Every `zip` 2.x release had been yanked from crates.io. Every `worker-build` from
+0.7.0 through the current 0.8.7 depends on `binary-install ^0.4.1`, which requires
+`zip ^2.1.3`. So the install was broken for everyone, and the place it surfaced
+was the job that mints a preview — which meant the gate skipped itself and the
+pull request showed a red check for a reason that had nothing to do with the
+branch.
+
+The published crate ships a `Cargo.lock` pinning `zip 2.4.2`, and cargo accepts a
+yanked version when a lockfile pins it:
+
+```bash
+cargo install worker-build --locked --version 0.8.7
+```
+
+Verified locally — three minutes and fourteen seconds of compiling — before it
+went near CI. The version is pinned as well: a build tool that moves under you
+during a seven-day window is a bad trade for being current.
+
+## Two gates, and one unreadable red
+
+The day the App started running the suite on pull requests, this repository's own
+gate went red:
+
+```
+Dispatched 0 tests (18 conflicts) (13 rate-deferred)
+```
+
+Both had dispatched the same thirty-one tests against the same URL, at the same
+time. The runner refused the duplicates and reported that nothing had been tested.
+
+A red caused by your two gates competing with each other is worse than having one
+gate, because it is indistinguishable from a red caused by the branch. So our job
+no longer dispatches the suite at all. It does the thing the App cannot do —
+proves that the suite committed in this repository is the suite that will run — in
+twenty-nine seconds, for no credits. The App runs the tests.
+
+Two gates, two different claims, both readable.
+
+## I filed the footgun instead of walking around it
+
+One more thing came out of the week, and it was about the tooling rather than the
+app. `test code put` silently converts a generated test into a user-authored one,
+and that permanently changes how every later run executes it: the agent stops
+healing it and replays it verbatim. Nothing in the command's help or its output
+says so, and no documented step reverses it.
+
+I found it the hard way. I pushed thirty-four generated browser tests to keep the
+two copies of the suite in step, and two consecutive runs afterwards returned
+exactly twenty of thirty-four — the same failures, no healing. That is what a
+suite looks like when repair has quietly stopped applying.
+
+It is filed with the reproduction rather than worked around, because a footgun
+that fires once will fire for everyone:
+[TestSprite/testsprite-cli#443](https://github.com/TestSprite/testsprite-cli/issues/443).
+
 ## What I'd tell you if you're doing this
 
 1. **Reproduce against production before you change anything.** I would have
@@ -420,6 +486,11 @@ up when I ran the four steps myself.
    fact about your product until you know how often it is green when it should
    not be. I found mine by accident, on a pull request that would not go green
    for reasons that kept changing. Nobody finds it on purpose.
+8. **Your infrastructure fails too, and it looks exactly like your branch.** Two
+   of this week's red checks had nothing to do with the app: a yanked crate
+   stopped the build tool installing, and our two gates fought over the same
+   tests. Before you read a red as "I broke something", ask what else had to be
+   true for it to be green.
 
 ## What's missing
 
