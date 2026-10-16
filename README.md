@@ -270,7 +270,7 @@ admits the instance was too large to enumerate. It never invents an optimum.
 
 ## Verification
 
-What is real, what is a fixture, and what is not:
+What is real, what is a fixture, and what is not. *The suite's scoping — what runs where, what a green means in each half, and the measured flake rate — is in [docs/how-the-suite-is-scoped.md](docs/how-the-suite-is-scoped.md).*
 
 | Claim | Status |
 |---|---|
