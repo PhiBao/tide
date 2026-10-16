@@ -192,11 +192,28 @@ jobs:
   # TestSprite: run the suite against this PR's preview. This is the blocking
   # check; branch protection marks it required.
   # -------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # The suite that runs must be the suite this repository describes.
+  #
+  # This job deliberately does NOT dispatch the browser tests any more.
+  # TestSprite's GitHub App does that from the portal side on the same pull
+  # request and posts a `TestSprite V3` check, which blocks the merge. Running
+  # both meant both dispatched the same tests at once and the runner refused:
+  #
+  #   Dispatched 0 tests (18 conflicts) (13 rate-deferred)
+  #
+  # A red check caused by the two gates competing with each other rather than by
+  # the branch is worse than one gate, because it is unreadable. What is left
+  # here is the check the App cannot make -- whether the suite committed in this
+  # repository is the suite that will run -- and it costs no credits.
+  #
+  # The job name is unchanged on purpose: it is a required status check, and
+  # renaming it would leave branch protection waiting for a check that never
+  # arrives.
+  # -------------------------------------------------------------------------
   testsprite:
     name: TestSprite
     runs-on: ubuntu-latest
-    needs: preview
-    # Runs against the PR's own preview, so it is a PR-only job by construction.
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v7
@@ -208,114 +225,11 @@ jobs:
       - name: Install TestSprite CLI
         run: npm install -g @testsprite/testsprite-cli
 
-      # The suite that runs must be the suite this repository describes. Both
-      # copies drifted once -- a fix landed here while the portal kept running
-      # the old code -- and the only symptom was a red run whose reported cause
-      # was not the real one. So the check is part of the gate: a pull request
-      # that edits a test without sending the edit on fails here, before the
-      # suite runs, rather than reporting a green run about code that never
-      # executed.
       - name: Prove the suite here is the suite that runs
         env:
           TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
         run: python3 scripts/suite-sync.py
 
-      # A suite that did not run is not a suite that passed, so this fails rather
-      # than skipping. But it fails with the reason named, because the
-      # alternative is an opaque exit code 12 several layers down -- and a red
-      # nobody can read is how a team learns to ignore red.
-      - name: Check the credit balance
-        env:
-          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
-          NEEDED: 16
-        run: |
-          available="$(testsprite --output json credits 2>/dev/null | jq -r '.activeOrg.remaining // empty')"
-          if [ -z "$available" ]; then
-            echo "::error title=Credit check failed::could not read the balance; treating as unknown rather than affordable."
-            exit 1
-          fi
-          echo "TestSprite credits available: $available; this suite needs about $NEEDED"
-          if ! awk -v a="$available" -v n="$NEEDED" 'BEGIN { exit !(a >= n) }'; then
-            echo "::error title=Out of TestSprite credits::$available available, about $NEEDED needed. The suite cannot run, so this check is red rather than green -- it did not pass, it did not happen. Top up at https://www.testsprite.com/pricing"
-            exit 1
-          fi
-
-      - name: Run suite against the preview
-        env:
-          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
-          PREVIEW_URL: ${{ needs.preview.outputs.url }}
-          PROJECT_ID: ${{ secrets.TESTSPRITE_PROJECT_ID }}
-        # `--target-url` creates a temporary environment for this run and
-        # deletes it afterwards, so concurrent PRs never collide and no
-        # environment budget is consumed.
-        #
-        # Two at a time, not five. This app re-solves its schedule on every
-        # interaction -- an optimiser with a certificate, on each click -- and
-        # four concurrent cold browser sessions saturate one isolate. The
-        # symptom was two tests failing on every run, always the two that edit a
-        # load and wait for the answer to change, while both passed in isolation
-        # against the very same preview. The gate was measuring its own
-        # contention rather than the branch. At 600s the same lesson was a
-        # timeout that 900s removed.
-        #
-        # Auto-heal is deliberately NOT disabled here. A frontend test is
-        # executed by an agent against its plan, and the agent re-authors the
-        # generated selectors when it finds them stale; 12 of these 34 tests cannot
-        # replay verbatim at all, because their generated code names elements the
-        # application does not have, or selects empty option values. Committing that code as the contract was a mistake this
-        # repository has since corrected: tests/ui/ holds the plans, which are
-        # what this gate is accountable to. The trade-off is stated in the
-        # README rather than hidden: a healed test can pass over a regression,
-        # which is why the exact assertions live in the API suite, where the
-        # code is authored and runs strict.
-        run: |
-          set -o pipefail
-          testsprite test run --all \
-            --project "$PROJECT_ID" \
-            --target-url "$PREVIEW_URL" \
-            --wait \
-            --max-concurrency 2 \
-            --timeout 900 \
-            --output json \
-            --report junit --report-file ./testsprite-junit.xml \
-            --summary-file ./testsprite-summary.json \
-            > result.json
-
-      - name: Report
-        if: always()
-        run: |
-          echo "## TestSprite" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Target: $PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`json" >> "$GITHUB_STEP_SUMMARY"
-          cat testsprite-summary.json 2>/dev/null >> "$GITHUB_STEP_SUMMARY" || echo "(no summary)" >> "$GITHUB_STEP_SUMMARY"
-          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload JUnit report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: testsprite-junit-pr${{ github.event.pull_request.number }}
-          path: testsprite-junit.xml
-          if-no-files-found: warn
-
-      - name: Capture the failure bundle
-        # One self-consistent bundle, so a coding agent can read exactly what
-        # broke without stitching together artefacts from two different runs.
-        if: failure()
-        run: |
-          testsprite test failure get \
-            "$(jq -r '.run.testId // empty' result.json)" \
-            --out ./.testsprite/failure || true
-          ls -R .testsprite 2>/dev/null || true
-
-  # -------------------------------------------------------------------------
-  # Deploy: keep the public URL current with main.
-  #
-  # The judges are told to open the live URL, so it has to reflect main rather
-  # than whatever was last deployed by hand. This runs only on a push to main,
-  # after the same checks that gate every PR.
-  # -------------------------------------------------------------------------
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
