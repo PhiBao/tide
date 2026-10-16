@@ -113,7 +113,22 @@ jobs:
       # an .rlib and wrangler would find no entry point.
       - name: Build worker
         working-directory: crates/worker
-        run: cargo install -q worker-build && worker-build --release
+        # `--locked` and the version pin are load-bearing, not hygiene. Every
+        # `zip` 2.x release was yanked from crates.io, and every worker-build
+        # from 0.7.0 to the current 0.8.7 depends on `binary-install ^0.4.1`,
+        # which requires `zip ^2.1.3` -- so an unpinned install cannot resolve
+        # a version at all:
+        #
+        #   failed to select a version for the requirement `zip = "^2.1.3"`
+        #   version 2.1.3 is yanked ... version 2.6.1 is yanked
+        #
+        # The published crate ships a Cargo.lock pinning zip 2.4.2, and cargo
+        # accepts a yanked version when a lockfile pins it. Hence `--locked`.
+        # Verified locally before it went near CI.
+        #
+        # The pin stays for the week: a build tool that moves under you during a
+        # seven-day window is a bad trade for being current.
+        run: cargo install -q worker-build --locked --version 0.8.7 && worker-build --release
 
       - name: Mint preview
         id: mint
@@ -326,7 +341,22 @@ jobs:
 
       - name: Build worker
         working-directory: crates/worker
-        run: cargo install -q worker-build && worker-build --release
+        # `--locked` and the version pin are load-bearing, not hygiene. Every
+        # `zip` 2.x release was yanked from crates.io, and every worker-build
+        # from 0.7.0 to the current 0.8.7 depends on `binary-install ^0.4.1`,
+        # which requires `zip ^2.1.3` -- so an unpinned install cannot resolve
+        # a version at all:
+        #
+        #   failed to select a version for the requirement `zip = "^2.1.3"`
+        #   version 2.1.3 is yanked ... version 2.6.1 is yanked
+        #
+        # The published crate ships a Cargo.lock pinning zip 2.4.2, and cargo
+        # accepts a yanked version when a lockfile pins it. Hence `--locked`.
+        # Verified locally before it went near CI.
+        #
+        # The pin stays for the week: a build tool that moves under you during a
+        # seven-day window is a bad trade for being current.
+        run: cargo install -q worker-build --locked --version 0.8.7 && worker-build --release
 
       - name: Deploy
         env:

@@ -4,27 +4,31 @@
   "planSteps": [
     {
       "type": "action",
-      "description": "Navigate to the energy management page"
+      "description": "Open the app and wait for the initial solve to finish."
     },
     {
       "type": "action",
-      "description": "Scroll to the load management section"
+      "description": "Note the scheduled bill total shown in the Outcome panel, and the number of loads listed under Loads."
     },
     {
       "type": "action",
-      "description": "Click the control to add a load"
-    },
-    {
-      "type": "action",
-      "description": "Click the control to re-solve the schedule"
+      "description": "Click the 'Re-solve' button and wait for the app to finish."
     },
     {
       "type": "assertion",
-      "description": "Verify the schedule outcome is updated after recalculation"
+      "description": "Verify the scheduled bill total is EXACTLY what it was before the press. This app is deterministic: the same scenario must produce the same answer, so a figure that changed here would be the defect. Do not expect the numbers to change."
+    },
+    {
+      "type": "action",
+      "description": "Click '+ Add a load' and wait for the app to finish re-solving."
     },
     {
       "type": "assertion",
-      "description": "Verify the managed loads remain displayed"
+      "description": "Verify the number of loads shown under Loads has increased by exactly one."
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the scheduled bill total HAS changed, because the scenario changed. Adding a load changes the answer; re-solving it does not."
     }
   ]
 }
