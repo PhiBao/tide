@@ -387,7 +387,11 @@ change the numbers is asserting against the product's central guarantee — and 
 was my plan that told it to.
 
 Rewritten to state the real invariant — *unchanged after Re-solve, changed after
-an edit* — the next run was **31 of 31 green**.
+an edit* — the next run was **31 of 31 green** on
+[PR #4](https://github.com/PhiBao/tide/pull/4). And every pull request since has
+run the suite without anyone starting it: on
+[PR #6](https://github.com/PhiBao/tide/pull/6) the App posted
+*"All 31 tests passed"* as a status check that held the merge until it did.
 
 That is the lesson from the top of this document arriving a third time, with
 better production values. A failure report is a hypothesis. This one was accurate
@@ -433,6 +437,11 @@ not fix. That is the one number here I would most like to have wrong.
 
 ---
 
-*Tide is Rust + Cloudflare Workers + Next.js, MIT licensed. The PR that
-closed the bug carries the evidence: [PR #2](https://github.com/PhiBao/tide/pull/2)
-has the red run on its checks tab, and the commit that took it to 19/19 green.*
+*Tide is Rust + Cloudflare Workers + Next.js, MIT licensed. It is live at
+[tide.kiter0211.workers.dev](https://tide.kiter0211.workers.dev), and the source
+is [github.com/PhiBao/tide](https://github.com/PhiBao/tide).*
+
+*The bug that started this closed in
+[PR #2](https://github.com/PhiBao/tide/pull/2), whose checks tab carries the red
+run and the commit that took it to 19/19 green. The App's first run is on
+[PR #6](https://github.com/PhiBao/tide/pull/6), where its check held the merge.*
