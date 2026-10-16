@@ -5,7 +5,7 @@ runs where, what a green means, and which parts are weak.
 
 | Suite | Tests | TestSprite project | Runs against |
 |---|---|---|---|
-| `ui` | 31 | Tide web (`949b0571-…`) | the pull request's own deployment |
+| `ui` | 31 | Tide (`949b0571-…`) | the pull request's own deployment |
 | `storage` | 3 | Tide web - storage (`a54cd337-…`) | production |
 | `api` | 18 | Tide API (`235f314b-…`) | production |
 

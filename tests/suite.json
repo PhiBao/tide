@@ -103,7 +103,7 @@
     {
       "key": "ui",
       "project_id": "949b0571-9a72-473c-945e-7168e929f6a6",
-      "project_name": "Tide web",
+      "project_name": "Tide",
       "dir": "tests/ui",
       "kind": "plan",
       "tests": [
