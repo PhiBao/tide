@@ -11,6 +11,7 @@ arithmetic yourself.
 Live:  https://tide.kiter0211.workers.dev
 Demo:  docs/tide-demo.mp4  (97 seconds, narrated, every number taken from the app)
 Suite: TestSprite projects 949b0571-* and 235f314b-*, 52 tests across three bound suites
+Gate:  TestSprite's GitHub App on every PR, blocking the merge — see PR #4
 ```
 
 
@@ -132,7 +133,7 @@ DNS-safe by construction and removes the guesswork.
 | Criterion | How Tide answers it |
 |---|---|
 | 40% Project Quality | A polished, deterministic app with deliberate loading, empty and error states; 111 Rust tests behind it (93 in the pure core, 18 over HTTP). Exact integer money throughout — no floats anywhere in the domain — so every figure on screen is reproducible by hand. |
-| 40% Tests That Run Themselves | **52 tests, all green.** 31 browser tests gate every PR against that PR's own deployment, 3 that need a database run against the deployed app beside the 18 authored API tests, which assert exact micro-dollar totals. The browser half is flaky at about 5% of results — measured, and stated in the limitations rather than hidden. Coverage spans all four tariffs, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, the empty state, mobile row layout, and every failure mode. The split is deliberate: **breadth from the browser suite, precision from the API suite.** The API tests are authored Python, never re-authored, and CI runs them strict (`--no-auto-heal`) so their green is their own. The browser suite is plan-driven — a judgement about how to drive the page rather than an assertion about it — and I measure that limit instead of hiding it: replayed verbatim, 22 of the 34 pass and 12 need the agent. Both suites are committed and bound to the ids that run them (`tests/suite.json`); CI proves the two copies agree *before* the suite runs. The gate has caught a real defect: [PR #2](https://github.com/PhiBao/tide/pull/2) went red, was diagnosed, fixed, and went 19/19 green. |
+| 40% Tests That Run Themselves | **52 tests, all green.** TestSprite's GitHub App runs 31 browser tests against each pull request's own deployment and holds the merge; 3 that need a database run against the deployed app beside the 18 authored API tests, which assert exact micro-dollar totals. The browser half is flaky at about 3% of results — measured, and stated in the limitations rather than hidden. Coverage spans all four tariffs, load inventory manipulation, schedule recomputation, the cost comparison, the site cap, exact delivery, DST anchoring, the empty state, mobile row layout, and every failure mode. The split is deliberate: **breadth from the browser suite, precision from the API suite.** The API tests are authored Python, never re-authored, and CI runs them strict (`--no-auto-heal`) so their green is their own. The browser suite is plan-driven — a judgement about how to drive the page rather than an assertion about it — and I measure that limit instead of hiding it: replayed verbatim, 22 of the 34 pass and 12 need the agent. Both suites are committed and bound to the ids that run them (`tests/suite.json`); CI proves the two copies agree *before* the suite runs. The gate has caught a real defect: [PR #2](https://github.com/PhiBao/tide/pull/2) went red, was diagnosed, fixed, and went 19/19 green. |
 | 20% Innovation | The proof-backed optimiser is the whole product: a relaxation bound certifies optimality on any instance, and a brute-force oracle independently checks small ones — returning `null` rather than guessing when it cannot. No model, no heuristics, no confidence scores. Determinism is what makes the certificate possible, so the design refuses anything that would make it impossible. |
 | ∞ Engagement | The long-form write-up above, published during the window; the suite committed in the repo and bound to the ids that execute it, so its claims are checkable rather than asserted; and the bugs told properly rather than summarised — including the one this project got wrong about itself. |
 
@@ -236,20 +237,28 @@ NEXT_PUBLIC_API_BASE=https://tide.kiter0211.workers.dev
 
 ## Demo
 
-**The proof is a pull request.** [PR #1](https://github.com/PhiBao/tide/pull/1) is
-the submission artefact: its checks tab shows `Checks`, `Preview` and
-`TestSprite` all green, with TestSprite dispatching the UI suite against
-`https://pr-1-tide.kiter0211.workers.dev` — the preview built from that PR's own
-commit — and reporting **18/18 passed**. The suite has grown since; the gate
-now runs 34. The live URL below is deployed from `main` by the same pipeline.
+**The proof is a pull request.** [PR #4](https://github.com/PhiBao/tide/pull/4) is
+the submission artefact, and it is the loop working end to end. TestSprite's
+GitHub App watched the pull request, resolved
+`https://pr-4-tide.kiter0211.workers.dev` from the branch's own deployment, ran
+the 31-test browser suite against it, and commented the result on the thread.
 
-**And here is the case worth reading.** [PR #2](https://github.com/PhiBao/tide/pull/2)
-is a bug found by hand, turned into a test, and fixed *because* the test failed.
-Its run dispatched 19 tests against `https://pr-2-tide.kiter0211.workers.dev`,
-the first of them red against the deployed build, and the last
-**19/19 green** against the commit that fixed it. That is the whole argument for
-self-running tests, and it happened on a real defect rather than a rehearsal:
-the `+` / `−` controls changed state and nothing downstream moved.
+Its first run came back **30 of 31**, failing
+`Re-solve the schedule after changing loads` because *"the displayed cost figures
+remained unchanged"*. Reproduced in a browser, that was the test asserting
+something this app must not do: re-solving an unchanged scenario is
+deterministic and returns the identical answer, which is the guarantee the
+certificate of optimality rests on. The plan was rewritten to state the real
+invariant, and the next run was **31 of 31 green**, with the App's check holding
+the merge.
+
+Two earlier pull requests carry the same story from before the App was wired.
+[PR #1](https://github.com/PhiBao/tide/pull/1) ran the then-18 browser tests
+green against its own preview, and
+[PR #2](https://github.com/PhiBao/tide/pull/2) is a bug found by hand, turned
+into a test, and fixed *because* the test failed — red against the deployed
+build, then **19/19 green** against the commit that fixed it: the `+` / `−`
+controls changed state and nothing downstream moved.
 
 **Try this first:** open the live URL and watch the ribbon. The trough on the
 left is the cheap overnight window; the crimson wall to its right is the
@@ -357,9 +366,10 @@ assert on. There is no mock path anywhere in the codebase.
   `Increasing a load's energy re-solves the schedule` on one run, `A rejected
   usage import explains itself` and `Expanding a bill line reveals the rule that
   produced it` on the next, both of which pass in isolation against the very same
-  preview. That is 5 failures out of 93 test results, about 5%, spread across four
-  different tests -- so it is a per-result rate, not a 5% chance that any
-  particular test will fail, and no single test is reliably failing. Lowering concurrency from 4 to 2 did not remove it. The honest
+  preview. That is 6 failures out of 217 test results across eight runs, about
+  3% — 5 of 93 in the first three runs, and 1 of 124 since. It is a per-result
+  rate, not a 5% chance that any particular test fails, and no single test is
+  reliably failing. Lowering concurrency from 4 to 2 did not remove it. The honest
   reading is that this half of the suite is a smoke alarm rather than a
   proof: it catches large breakage and occasionally cries wolf. The 18 API tests
   and the 111 Rust tests are the half whose green means something.
@@ -413,7 +423,7 @@ docs/diagrams/   architecture, proof loop, and PR-gate diagrams
 
 ## Licence
 
-Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. The Rust workspace declares `MIT OR Apache-2.0`, which is the standard dual licence for Rust crates — it keeps the core reusable by other Crates.io packages without forcing a licence choice on them.
+MIT — see [LICENSE](LICENSE). The Rust workspace declares `license = "MIT"` in `Cargo.toml`, and the same covers the frontend.
 
 ## Long-form write-up
 
