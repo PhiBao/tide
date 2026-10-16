@@ -31,6 +31,32 @@ The 18 `api` tests are scoped to production for a documented reason:
 `--target-url` is silently ignored for backend projects — verified by pointing
 it at a URL that does not serve this API and watching all 18 pass anyway.
 
+## What gates a merge
+
+Two independent runners report on every pull request, and they answer different
+questions.
+
+**This repository's CI** runs `scripts/suite-sync.py` first — proving the
+committed suite is the suite that will run — then dispatches the 31 browser tests
+against the pull request's own deployment. The `TestSprite` job is a required
+check, so it holds the merge.
+
+**TestSprite's GitHub App** watches from the portal side. Its trigger matches the
+`Preview` check completing, which is the signal that means the branch's
+deployment is live rather than merely started, and it resolves the target from a
+pattern:
+
+```
+https://pr-{pr}-tide.kiter0211.workers.dev
+```
+
+It comments the result on the pull request and posts a `TestSprite V3` commit
+status. With **Block PR until tests pass** on, that status holds the merge too.
+
+The split is deliberate. CI proves that the suite which ran is the suite in this
+repository; the App is what makes the loop run without anyone remembering to
+start it. A green PR should be readable as both claims at once.
+
 ## What a green means
 
 Not the same thing in both halves.
