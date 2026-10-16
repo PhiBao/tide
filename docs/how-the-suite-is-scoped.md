@@ -118,6 +118,31 @@ without sending the edit on fails at the check rather than reporting a green run
 about code that never executed. `--push` sends this repository's version to the
 portal; `--refresh-plans` re-exports a plan the portal regenerated.
 
+## Running it yourself
+
+The gate is not privileged. Anything it does, a reader can do from a terminal:
+
+```bash
+export TESTSPRITE_API_KEY=...      # a key for this workspace
+
+# proves the committed suite is the suite that will run
+python3 scripts/suite-sync.py
+
+# the browser gate, against any deployment you like
+testsprite test run --all \
+  --project 949b0571-9a72-473c-945e-7168e929f6a6 \
+  --target-url https://tide.kiter0211.workers.dev
+
+# the API suite, production-scoped by design
+testsprite test run --all \
+  --project 235f314b-a3e7-4361-8127-c05a1330c241
+```
+
+`--target-url` is what points the browser suite at a pull request's own
+deployment. It is silently ignored for backend projects, which is one of the two
+reasons the API suite is scoped to production rather than to a branch — the other
+is that a preview has no store for the three storage tests to write to.
+
 ## Why there is no model in the core
 
 Determinism is what makes the certificate of optimality possible: a relaxation
