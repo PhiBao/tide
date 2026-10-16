@@ -36,10 +36,17 @@ it at a URL that does not serve this API and watching all 18 pass anyway.
 Two independent runners report on every pull request, and they answer different
 questions.
 
-**This repository's CI** runs `scripts/suite-sync.py` first — proving the
-committed suite is the suite that will run — then dispatches the 31 browser tests
-against the pull request's own deployment. The `TestSprite` job is a required
-check, so it holds the merge.
+**This repository's CI** runs `scripts/suite-sync.py` — proving the committed
+suite is the suite that will run. It does *not* dispatch the browser tests.
+It did once, and so did the App, and the runner refused the second dispatch:
+
+```
+Dispatched 0 tests (18 conflicts) (13 rate-deferred)
+```
+
+A red check caused by the two gates competing is worse than one gate, because it
+is unreadable. The job is now the check the App cannot make, and it costs no
+credits.
 
 **TestSprite's GitHub App** watches from the portal side. Its trigger matches the
 `Preview` check completing, which is the signal that means the branch's
