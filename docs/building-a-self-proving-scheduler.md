@@ -331,6 +331,12 @@ tests. Read that carefully, because the obvious reading is wrong: it is not a 5%
 chance that any particular test fails. It is that roughly one result in twenty
 fails, and which one is not predictable.
 
+Four runs since then have gone better: three passed all thirty-one, and one
+failed a single test. Six failures in two hundred and seventeen results, about
+3%. I am keeping the first table because it is what the measurement looked like
+when it was small, and a number that only ever improves is a number nobody
+measured.
+
 Two sources of nondeterminism, and one of them is mine by design. The browser
 tests are executed by an agent working from a plan, and the agent re-authors the
 selectors as it goes, so the suite is not the same program twice. And the
@@ -388,6 +394,6 @@ not fix. That is the one number here I would most like to have wrong.
 
 ---
 
-*Tide is Rust + Cloudflare Workers + Next.js, MIT OR Apache-2.0. The PR that
+*Tide is Rust + Cloudflare Workers + Next.js, MIT licensed. The PR that
 closed the bug carries the evidence: [PR #2](https://github.com/PhiBao/tide/pull/2)
 has the red run on its checks tab, and the commit that took it to 19/19 green.*
